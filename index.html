@@ -2144,12 +2144,12 @@
         </div>
 
         <div class="toolbar-row">
-          <span class="toolbar-label">⚔️ Quests</span>
+          <span class="toolbar-label" id="todoChipsLabel">⚔️ Quests</span>
           <div class="chip-group" id="todoChips"></div>
         </div>
 
         <div class="toolbar-row">
-          <span class="toolbar-label">🃏 Pile</span>
+          <span class="toolbar-label" id="pileChipsLabel">🃏 Pile</span>
           <div class="chip-group" id="pileChips"></div>
         </div>
 
@@ -2259,6 +2259,81 @@ const PILE_OPTIONS = [
   { value: "hand", label: "\u{1F590}\u{FE0F} Hand" },
   { value: "discard", label: "\u{1F5D1}\u{FE0F} Discard" }
 ];
+
+/* ------------------------------------------------------------
+   Skin-aware wording. The fantasy card game uses flavor terms
+   (Quests / Hand / Deck / Discard, plus Epic/Legendary tiers);
+   the normal skin uses plain business terms. Everything routes
+   through T(...) / pileLabel(...) so a skin switch relabels the
+   whole UI. Tier marks are shown only in the fantasy skin.
+   ------------------------------------------------------------ */
+const PILE_LABELS = {
+  fantasy: { deck: "\u{1F0CF} Deck", hand: "\u{1F590}\u{FE0F} Hand", discard: "\u{1F5D1}\u{FE0F} Discard" },
+  normal:  { deck: "\u{1F4C1} Projects", hand: "\u{2B50} VIPs", discard: "\u{1F6AB} Irrelevant" }
+};
+function pileLabel(value) {
+  return (PILE_LABELS[state.ui.skin] || PILE_LABELS.normal)[value];
+}
+function pileOptionsForSkin() {
+  return PILE_OPTIONS.map(o => ({ value: o.value, label: pileLabel(o.value) }));
+}
+
+const TERMS = {
+  fantasy: {
+    todosLabel: "⚔️ Quests",
+    todosLogTitle: "⚔️ Quest Log",
+    todoAdd: "Add a quest...",
+    todoEmpty: "No quests yet. Add one above.",
+    todosColumn: "Quests",
+    todosWord: "quests",
+    hasOpenTodos: "Has open quests",
+    noTodos: "No quests",
+    sortMostTodos: "Most open quests first",
+    tooltipTitle: "⚔️ Quests",
+    statsTodos: "⚔️ Quests",
+    pileGroupLabel: "\u{1F0CF} Pile",
+    handTitle: "\u{1F590}️ Your Hand",
+    handInline: n => `\u{1F590}️ ${n} in hand`,
+    handFull: n => `Your hand is full (${n}/${n}). Return or discard a card from your hand first.`,
+    handEmpty: "Your hand is empty. Send a project here from the deck below to focus on it.",
+    sendToHand: "Send to hand",
+    statsTitle: "\u{1F4CA} Deck Statistics",
+    discardTitle: "\u{1F5D1}️ Discard Pile",
+    discardEmpty: "\u{1F578}️ No discarded projects. Archive a finished project here from its detail view.",
+    sentToDiscard: name => `"${name}" sent to Discard.`,
+    trashBtn: "\u{1F5D1}️ Trash Card",
+    trashTitle: "Trash card"
+  },
+  normal: {
+    todosLabel: "✅ To Do's",
+    todosLogTitle: "✅ To Do's",
+    todoAdd: "Add a to-do...",
+    todoEmpty: "No to-do's yet. Add one above.",
+    todosColumn: "To Do's",
+    todosWord: "to-do's",
+    hasOpenTodos: "Has open to-do's",
+    noTodos: "No to-do's",
+    sortMostTodos: "Most open to-do's first",
+    tooltipTitle: "✅ To Do's",
+    statsTodos: "✅ To Do's",
+    pileGroupLabel: "\u{1F4C2} Group",
+    handTitle: "⭐ VIPs",
+    handInline: n => `⭐ ${n} VIP${n === 1 ? "" : "s"}`,
+    handFull: n => `Your VIP list is full (${n}/${n}). Remove a VIP first.`,
+    handEmpty: "No VIPs yet. Mark a project as a VIP to focus on it.",
+    sendToHand: "Mark as VIP",
+    statsTitle: "\u{1F4CA} Project Statistics",
+    discardTitle: "\u{1F6AB} Irrelevant",
+    discardEmpty: "Nothing marked irrelevant yet. Mark a finished project here from its detail view.",
+    sentToDiscard: name => `"${name}" marked Irrelevant.`,
+    trashBtn: "\u{1F5D1}️ Delete",
+    trashTitle: "Delete"
+  }
+};
+function T(key) {
+  return (TERMS[state.ui.skin] || TERMS.normal)[key];
+}
+function isFantasy() { return state.ui.skin === "fantasy"; }
 const CATEGORY_META = {
   Dolley: "#0073ea",
   XY: "#e2445c",
@@ -2835,6 +2910,12 @@ function renderToolbar() {
     state.ui.skin = state.ui.skin === "fantasy" ? "normal" : "fantasy";
     saveState();
     applySkin();
+    // Relabel the whole UI (Quests/To Do's, Hand/VIPs, tier marks, etc.).
+    renderToolbar();
+    renderMissionsPanel();
+    renderNotesPanel();
+    renderAll();
+    if (openDetailId) renderDetail();
   };
 
   renderMultiChipGroup({
@@ -2853,11 +2934,14 @@ function renderToolbar() {
     onAll: () => { state.ui.statusFilters = STAGES.map((s, i) => i); }
   });
 
+  document.getElementById("todoChipsLabel").textContent = T("todosLabel");
+  document.getElementById("pileChipsLabel").textContent = T("pileGroupLabel");
+
   renderMultiChipGroup({
     containerId: "todoChips",
     options: [
-      { value: "hasOpen", label: "Has open quests" },
-      { value: "none", label: "No quests" }
+      { value: "hasOpen", label: T("hasOpenTodos") },
+      { value: "none", label: T("noTodos") }
     ],
     getSelected: () => state.ui.todoFilters,
     onToggle: (val) => toggleInArray(state.ui.todoFilters, val),
@@ -2866,7 +2950,7 @@ function renderToolbar() {
 
   renderMultiChipGroup({
     containerId: "pileChips",
-    options: PILE_OPTIONS,
+    options: pileOptionsForSkin(),
     getSelected: () => state.ui.pileFilters,
     onToggle: (val) => toggleInArray(state.ui.pileFilters, val),
     onAll: () => { state.ui.pileFilters = PILE_OPTIONS.map(o => o.value); }
@@ -2879,7 +2963,7 @@ function renderToolbar() {
     <option value="name-desc">Name (Z-A)</option>
     <option value="status-asc">Status (early first)</option>
     <option value="status-desc">Status (late first)</option>
-    <option value="todos-desc">Most open quests first</option>
+    <option value="todos-desc">${T("sortMostTodos")}</option>
   `;
   sortSelect.value = state.ui.sortBy;
   sortSelect.onchange = () => {
@@ -2961,7 +3045,7 @@ function renderSummary() {
   });
   const handCount = state.projects.filter(p => p.pile === "hand").length;
   if (handCount > 0) {
-    parts.push(`<span>\u{1F590}\u{FE0F} ${handCount} in hand</span>`);
+    parts.push(`<span>${T("handInline")(handCount)}</span>`);
   }
   bar.innerHTML = parts.map(p => `<span>${p}</span>`).join("");
 }
@@ -2977,7 +3061,7 @@ function setPile(proj, pile, sourceEl) {
   if (pile === "hand") {
     const handCount = state.projects.filter(p => p.pile === "hand" && p.id !== proj.id).length;
     if (handCount >= HAND_LIMIT) {
-      alert(`Your hand is full (${HAND_LIMIT}/${HAND_LIMIT}). Return or discard a card from your hand first.`);
+      alert(T("handFull")(HAND_LIMIT));
       return;
     }
   }
@@ -3031,7 +3115,7 @@ function renderHandStrip() {
   const header = document.createElement("div");
   header.className = "hand-strip-header";
   const title = document.createElement("h2");
-  title.textContent = "\u{1F590}\u{FE0F} Your Hand";
+  title.textContent = T("handTitle");
   header.appendChild(title);
   const handProjects = state.projects.filter(p => p.pile === "hand");
   const count = document.createElement("span");
@@ -3043,7 +3127,7 @@ function renderHandStrip() {
   if (handProjects.length === 0) {
     const empty = document.createElement("div");
     empty.className = "hand-strip-empty";
-    empty.innerHTML = '<div class="hand-strip-empty-icon">\u{1F0CF}</div>Your hand is empty. Send a project here from the deck below to focus on it.';
+    empty.innerHTML = '<div class="hand-strip-empty-icon">\u{1F0CF}</div>' + T("handEmpty");
     wrap.appendChild(empty);
     return;
   }
@@ -3072,7 +3156,7 @@ function renderHandStrip() {
     actions.className = "hand-card-actions";
     const toDeckBtn = document.createElement("button");
     toDeckBtn.className = "btn secondary small-btn";
-    toDeckBtn.textContent = "↩ Deck";
+    toDeckBtn.textContent = isFantasy() ? "↩ Deck" : "↩ Projects";
     toDeckBtn.addEventListener("click", e => { e.stopPropagation(); setPile(proj, "deck"); });
     actions.appendChild(toDeckBtn);
     const discardBtn = document.createElement("button");
@@ -3099,7 +3183,7 @@ function renderDiscardPile() {
   chevron.textContent = state.ui.discardCollapsed ? "▸" : "▾";
   header.appendChild(chevron);
   const title = document.createElement("h2");
-  title.textContent = "\u{1F5D1}\u{FE0F} Discard Pile";
+  title.textContent = T("discardTitle");
   header.appendChild(title);
   const count = document.createElement("span");
   count.className = "discard-count";
@@ -3119,7 +3203,7 @@ function renderDiscardPile() {
   if (discarded.length === 0) {
     const empty = document.createElement("div");
     empty.className = "missions-empty";
-    empty.textContent = "\u{1F578}\u{FE0F} No discarded projects. Archive a finished project here from its detail view.";
+    empty.textContent = T("discardEmpty");
     body.appendChild(empty);
   } else {
     discarded.forEach(proj => {
@@ -3252,7 +3336,7 @@ function renderCardsView(projects) {
 
     const delBtn = document.createElement("button");
     delBtn.className = "card-delete";
-    delBtn.title = "Trash card";
+    delBtn.title = T("trashTitle");
     delBtn.textContent = "✕";
     delBtn.addEventListener("click", e => { e.stopPropagation(); trashCard(proj.id); });
     card.appendChild(delBtn);
@@ -3260,7 +3344,7 @@ function renderCardsView(projects) {
     if (proj.pile !== "hand") {
       const toHandBtn = document.createElement("button");
       toHandBtn.className = "card-to-hand";
-      toHandBtn.title = "Send to hand";
+      toHandBtn.title = T("sendToHand");
       toHandBtn.textContent = "\u{1F590}\u{FE0F}";
       toHandBtn.addEventListener("click", e => { e.stopPropagation(); setPile(proj, "hand", e.currentTarget); });
       card.appendChild(toHandBtn);
@@ -3279,7 +3363,7 @@ function renderCardsView(projects) {
     art.innerHTML = categoryIconHTML(proj.category);
     card.appendChild(art);
 
-    if (TIER_META[tier]) {
+    if (isFantasy() && TIER_META[tier]) {
       const tierBanner = document.createElement("div");
       tierBanner.className = "tier-banner tier-" + tier;
       tierBanner.textContent = TIER_META[tier].label;
@@ -3296,7 +3380,7 @@ function renderCardsView(projects) {
     const rules = document.createElement("div");
     rules.className = "card-rules";
     rules.innerHTML = `
-      <span class="rule-line">✅ ${doneCount}/${proj.todos.length} quests complete</span>
+      <span class="rule-line">✅ ${doneCount}/${proj.todos.length} ${T("todosWord")} complete</span>
       ${proj.mapImage ? '<span class="rule-line">\u{1F5FA}\u{FE0F} Map charted</span>' : ""}
       ${proj.notes.length ? `<span class="rule-line">\u{1F4DC} ${proj.notes.length} note${proj.notes.length === 1 ? "" : "s"}</span>` : ""}
     `;
@@ -3307,7 +3391,7 @@ function renderCardsView(projects) {
       tooltip.className = "card-quest-tooltip";
       const tooltipTitle = document.createElement("div");
       tooltipTitle.className = "card-quest-tooltip-title";
-      tooltipTitle.textContent = "\u{2694}\u{FE0F} Quests";
+      tooltipTitle.textContent = T("tooltipTitle");
       tooltip.appendChild(tooltipTitle);
       const tooltipList = document.createElement("ul");
       proj.todos.forEach(t => {
@@ -3370,7 +3454,7 @@ function renderTableView(projects) {
         <th>Project</th>
         <th>Kind</th>
         <th>Status</th>
-        <th>Quests</th>
+        <th>${T("todosColumn")}</th>
         <th>Map</th>
         <th></th>
       </tr>
@@ -3388,7 +3472,7 @@ function renderTableView(projects) {
     const tier = getCardTier(proj);
     const tdName = document.createElement("td");
     tdName.className = "table-name";
-    if (TIER_META[tier]) {
+    if (isFantasy() && TIER_META[tier]) {
       const tierDot = document.createElement("span");
       tierDot.className = "table-tier-dot tier-" + tier;
       tierDot.title = TIER_META[tier].label;
@@ -3421,14 +3505,14 @@ function renderTableView(projects) {
     if (proj.pile !== "hand") {
       const toHandBtn = document.createElement("button");
       toHandBtn.className = "table-delete";
-      toHandBtn.title = "Send to hand";
+      toHandBtn.title = T("sendToHand");
       toHandBtn.textContent = "\u{1F590}\u{FE0F}";
       toHandBtn.addEventListener("click", e => { e.stopPropagation(); setPile(proj, "hand", e.currentTarget); });
       tdDelete.appendChild(toHandBtn);
     }
     const delBtn = document.createElement("button");
     delBtn.className = "table-delete";
-    delBtn.title = "Trash card";
+    delBtn.title = T("trashTitle");
     delBtn.textContent = "✕";
     delBtn.addEventListener("click", e => { e.stopPropagation(); trashCard(proj.id); });
     tdDelete.appendChild(delBtn);
@@ -3468,7 +3552,7 @@ function trashCard(id) {
   saveState();
   renderAll();
   if (openDetailId === id) renderDetail();
-  showUndoToast(`"${name}" sent to Discard.`, () => {
+  showUndoToast(T("sentToDiscard")(name), () => {
     const p = state.projects.find(pp => pp.id === id);
     if (!p) return;
     p.pile = previousPile;
@@ -3615,9 +3699,9 @@ function renderPileControl(proj) {
   box.className = "pile-control";
   const label = document.createElement("span");
   label.className = "pile-control-label";
-  label.textContent = "Pile:";
+  label.textContent = isFantasy() ? "Pile:" : "Group:";
   box.appendChild(label);
-  PILE_OPTIONS.forEach(opt => {
+  pileOptionsForSkin().forEach(opt => {
     const btn = document.createElement("button");
     btn.className = "chip" + (proj.pile === opt.value ? " active" : "");
     btn.textContent = opt.label;
@@ -3640,13 +3724,14 @@ function renderDetail() {
 
   const tier = getCardTier(proj);
   const ribbon = document.getElementById("detailTierRibbon");
-  if (TIER_META[tier]) {
+  if (isFantasy() && TIER_META[tier]) {
     ribbon.textContent = TIER_META[tier].label;
     ribbon.className = "modal-tier-ribbon visible tier-" + tier;
   } else {
     ribbon.textContent = "";
     ribbon.className = "modal-tier-ribbon";
   }
+  document.getElementById("detailDeleteBtn").textContent = T("trashBtn");
 
   detailTitle.value = proj.name;
   applyBidi(detailTitle, proj.name);
@@ -3799,14 +3884,14 @@ function renderQuestLog(proj) {
   const box = document.createElement("div");
   box.className = "section-box quest-log-box";
   const h4 = document.createElement("h4");
-  h4.textContent = "\u{2694}\u{FE0F} Quest Log";
+  h4.textContent = T("todosLogTitle");
   box.appendChild(h4);
 
   const inputRow = document.createElement("div");
   inputRow.className = "item-input";
   const input = document.createElement("input");
   input.type = "text";
-  input.placeholder = "Add a quest...";
+  input.placeholder = T("todoAdd");
   input.dir = "auto";
   const addBtn = document.createElement("button");
   addBtn.className = "btn small-btn";
@@ -3827,7 +3912,7 @@ function renderQuestLog(proj) {
   if (proj.todos.length === 0) {
     const empty = document.createElement("div");
     empty.className = "missions-empty";
-    empty.textContent = "No quests yet. Add one above.";
+    empty.textContent = T("todoEmpty");
     box.appendChild(empty);
     return box;
   }
@@ -4201,7 +4286,7 @@ function renderStatsPanel() {
   header.appendChild(chevron);
 
   const title = document.createElement("h2");
-  title.textContent = "\u{1F4CA} Deck Statistics";
+  title.textContent = T("statsTitle");
   header.appendChild(title);
 
   const countBadge = document.createElement("span");
@@ -4273,7 +4358,7 @@ function renderStatsPanel() {
     }))));
 
     const pileColors = { deck: "#0073ea", hand: "#fdab3d", discard: "#676879" };
-    body.appendChild(statBar("Pile", PILE_OPTIONS.map(o => ({
+    body.appendChild(statBar(isFantasy() ? "Pile" : "Group", pileOptionsForSkin().map(o => ({
       label: o.label.replace(/^\S+\s/, ""),
       count: state.projects.filter(p => p.pile === o.value).length,
       color: pileColors[o.value]
@@ -4286,7 +4371,7 @@ function renderStatsPanel() {
     const summaryRow = document.createElement("div");
     summaryRow.className = "stats-summary-row";
     summaryRow.innerHTML = `
-      <span>\u{2694}\u{FE0F} Quests: <strong>${doneTodos}/${totalTodos}</strong> complete</span>
+      <span>${T("statsTodos")}: <strong>${doneTodos}/${totalTodos}</strong> complete</span>
       <span>\u{1F4DC} Notes: <strong>${totalNotes}</strong></span>
     `;
     body.appendChild(summaryRow);
