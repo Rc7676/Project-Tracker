@@ -54,9 +54,33 @@ tier is plenty). Setup takes about 5 minutes.
 
    Paste your two values between the quotes. Save, commit, and push.
 
-That's it. The footer pill now reads **“Shared · synced”** instead of
-**“Local only”**, and every visitor reads/writes the same workspace. Open the
-app in two browsers and watch an edit in one appear in the other.
+That's it. Once you also set up login (next section), the footer pill reads
+**“Shared · synced”** after you sign in, and every signed-in teammate
+reads/writes the same workspace. Open the app in two browsers and watch an edit
+in one appear in the other.
+
+---
+
+## 3. Turn on login (required if your repo/site is public)
+
+The shared table is locked to **signed-in users** (see
+`supabase-schema.sql`). The public anon key alone can't read or write your
+data — a visitor must log in with an account you create. Set this up:
+
+1. In Supabase: **Authentication → Providers → Email** — make sure **Email** is
+   enabled, and turn **OFF “Allow new users to sign up.”** This stops strangers
+   from creating their own accounts. (Optional: turn off “Confirm email” so the
+   accounts you create work immediately.)
+2. Add your team: **Authentication → Users → Add user** → enter each person's
+   email + a password → **Create user**. Repeat for everyone who should have
+   access.
+3. Make sure you've run the latest `supabase-schema.sql` (its policies are
+   `to authenticated`). If you ran an older version with “public” policies,
+   just run the file again — it replaces them.
+
+Now when anyone opens the app they get a **Sign in** screen. Only the accounts
+you created can get in; everyone else is locked out even though the code and
+key are public. There's a **🚪 Sign out** button in the footer.
 
 ### What is and isn't shared
 
@@ -72,9 +96,10 @@ app in two browsers and watch an edit in one appear in the other.
   *last-write-wins*. For a small team this is fine. If two people edit at the
   exact same second, the later save wins for the whole document — so avoid
   having two people rewrite the same project simultaneously.
-- **The anon key is public by design.** It only allows access to this one
-  shared table. Keep the app URL within your team, and don't store anything
-  secret in the tracker.
+- **The anon key is public by design, and that's OK here.** With the login
+  gate on and “Allow new users to sign up” turned off, the key alone grants no
+  access — only the accounts you create can read or write. Removing a person's
+  access is as simple as deleting their user in Supabase → Authentication.
 - **Backups:** the **⬇️ Export Backup** button downloads the full dataset as
   JSON; **⬆️ Import Backup** restores it. Good to grab one before big changes.
 

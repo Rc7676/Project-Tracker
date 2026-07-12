@@ -2085,6 +2085,58 @@
   .sync-status.saving  .sync-dot { background: #fdab3d; }
   .sync-status.connecting .sync-dot { background: #579bfc; }
   .sync-status.error   .sync-dot { background: #c43a3a; }
+
+  /* Login gate */
+  .auth-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: linear-gradient(160deg, #1d1710 0%, #100c08 100%);
+  }
+  .auth-overlay.visible { display: flex; }
+  .auth-card {
+    width: 100%;
+    max-width: 360px;
+    background: var(--card-bg);
+    color: var(--text);
+    border: 2px solid var(--gold);
+    border-radius: 14px;
+    padding: 28px 26px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+  .auth-card h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 22px;
+    color: var(--gold);
+    letter-spacing: 0.03em;
+  }
+  .auth-sub { margin: 0 0 6px; font-size: 13.5px; color: var(--muted); }
+  .auth-card input {
+    width: 100%;
+    padding: 11px 13px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .auth-card .btn { width: 100%; justify-content: center; padding: 11px; }
+  .auth-error {
+    min-height: 18px;
+    font-size: 12.5px;
+    color: var(--danger);
+    font-weight: 600;
+  }
+  .auth-hint { font-size: 11.5px; color: var(--muted); margin: 2px 0 0; }
 </style>
 <script>
   // Set theme + skin before first paint to avoid a flash of the wrong look.
@@ -2207,6 +2259,7 @@
         <span class="sync-status local" id="syncStatus" title="Where your data is stored">
           <span class="sync-dot"></span><span id="syncStatusText">Local only</span>
         </span>
+        <button class="btn secondary" id="signOutBtn" title="Sign out" style="display:none">🚪 Sign out</button>
       </div>
     </main>
 
@@ -2231,6 +2284,18 @@
       <div class="modal-tier-ribbon" id="detailTierRibbon"></div>
       <div class="modal-body" id="detailBody"></div>
     </div>
+  </div>
+</div>
+
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <h2>Project Tracker</h2>
+    <p class="auth-sub">Sign in to access the shared workspace.</p>
+    <input type="email" id="authEmail" placeholder="Email" autocomplete="username" dir="ltr">
+    <input type="password" id="authPassword" placeholder="Password" autocomplete="current-password" dir="ltr">
+    <button class="btn" id="authSignInBtn">Sign In</button>
+    <div class="auth-error" id="authError"></div>
+    <p class="auth-hint">Accounts are created by your workspace admin.</p>
   </div>
 </div>
 
@@ -2717,8 +2782,11 @@ function schedulePush() {
   pushTimer = setTimeout(pushNow, 600);
 }
 
+let realtimeSubscribed = false;
+
 async function initBackend() {
   if (!backendEnabled()) {
+    // Local-only mode: no cloud, no login required.
     setSyncStatus("local", "Local only");
     return;
   }
@@ -2730,12 +2798,39 @@ async function initBackend() {
     const baseUrl = SUPABASE_URL.trim().replace(/\/+$/, "").replace(/\/rest\/v1$/, "");
     supabaseClient = window.supabase.createClient(baseUrl, SUPABASE_ANON_KEY);
 
+    // React to sign-in / sign-out (also fires once on load with the current session).
+    supabaseClient.auth.onAuthStateChange((_event, session) => handleSession(session));
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    handleSession(session);
+  } catch (e) {
+    console.error("Backend init failed:", e);
+    backendReady = false;
+    setSyncStatus("error", "Sync error — using local");
+  }
+}
+
+function handleSession(session) {
+  const signedIn = !!(session && session.user);
+  updateAuthUI(signedIn, session);
+  if (signedIn) {
+    hideAuthOverlay();
+    if (!backendReady) startSync();
+  } else {
+    backendReady = false;
+    setSyncStatus("connecting", "Sign in required");
+    showAuthOverlay();
+  }
+}
+
+async function startSync() {
+  try {
+    setSyncStatus("connecting", "Loading…");
+    backendReady = true;
+
     // Pull the shared workspace (if it exists yet).
     const { data, error } = await supabaseClient
       .from("app_state").select("data").eq("id", SHARED_ROW_ID).maybeSingle();
     if (error) throw error;
-
-    backendReady = true;
 
     if (data && data.data) {
       applySharedData(data.data);
@@ -2746,24 +2841,73 @@ async function initBackend() {
     }
     setSyncStatus("synced", "Shared · synced");
 
-    // Live updates from other users.
-    supabaseClient
-      .channel("app_state_" + SHARED_ROW_ID)
-      .on("postgres_changes",
-        { event: "*", schema: "public", table: "app_state", filter: "id=eq." + SHARED_ROW_ID },
-        payload => {
-          const row = payload.new;
-          if (!row || !row.data || row.updated_by === CLIENT_ID) return;
-          applySharedData(row.data);
-          rerenderAllData();
-          setSyncStatus("synced", "Shared · synced");
-        })
-      .subscribe();
+    // Live updates from other users (subscribe once).
+    if (!realtimeSubscribed) {
+      supabaseClient
+        .channel("app_state_" + SHARED_ROW_ID)
+        .on("postgres_changes",
+          { event: "*", schema: "public", table: "app_state", filter: "id=eq." + SHARED_ROW_ID },
+          payload => {
+            const row = payload.new;
+            if (!row || !row.data || row.updated_by === CLIENT_ID) return;
+            applySharedData(row.data);
+            rerenderAllData();
+            setSyncStatus("synced", "Shared · synced");
+          })
+        .subscribe();
+      realtimeSubscribed = true;
+    }
   } catch (e) {
-    console.error("Backend init failed:", e);
+    console.error("Sync failed:", e);
     backendReady = false;
-    setSyncStatus("error", "Sync error — using local");
+    setSyncStatus("error", "Sync error");
   }
+}
+
+/* ---- Login gate UI ---- */
+function showAuthOverlay() {
+  const ov = document.getElementById("authOverlay");
+  if (ov) ov.classList.add("visible");
+}
+function hideAuthOverlay() {
+  const ov = document.getElementById("authOverlay");
+  if (ov) ov.classList.remove("visible");
+}
+function updateAuthUI(signedIn, session) {
+  const btn = document.getElementById("signOutBtn");
+  if (btn) {
+    btn.style.display = signedIn ? "" : "none";
+    const email = signedIn && session && session.user ? session.user.email : "";
+    btn.title = email ? ("Signed in as " + email + " — sign out") : "Sign out";
+  }
+}
+async function doSignIn() {
+  const emailEl = document.getElementById("authEmail");
+  const pwEl = document.getElementById("authPassword");
+  const errEl = document.getElementById("authError");
+  const btn = document.getElementById("authSignInBtn");
+  const email = emailEl.value.trim();
+  const password = pwEl.value;
+  if (!email || !password) { errEl.textContent = "Enter your email and password."; return; }
+  errEl.textContent = "";
+  btn.disabled = true;
+  const prev = btn.textContent;
+  btn.textContent = "Signing in…";
+  try {
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    if (error) errEl.textContent = error.message;
+    else pwEl.value = "";
+    // Success is handled by onAuthStateChange -> handleSession.
+  } catch (e) {
+    errEl.textContent = "Could not sign in. Check your connection.";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = prev;
+  }
+}
+async function doSignOut() {
+  if (supabaseClient) await supabaseClient.auth.signOut();
+  // onAuthStateChange -> handleSession shows the login overlay again.
 }
 
 function newProject(name, category) {
@@ -4539,6 +4683,12 @@ renderToolbar();
 renderMissionsPanel();
 renderNotesPanel();
 renderAll();
+
+// Login gate wiring.
+document.getElementById("authSignInBtn").addEventListener("click", doSignIn);
+document.getElementById("authPassword").addEventListener("keydown", e => { if (e.key === "Enter") doSignIn(); });
+document.getElementById("authEmail").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("authPassword").focus(); });
+document.getElementById("signOutBtn").addEventListener("click", doSignOut);
 
 // Connect to the shared backend if it's configured (otherwise stays local).
 initBackend();
