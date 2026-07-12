@@ -2137,6 +2137,116 @@
     font-weight: 600;
   }
   .auth-hint { font-size: 11.5px; color: var(--muted); margin: 2px 0 0; }
+
+  /* Assignee chips + avatars */
+  .assignee-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    max-width: 100%;
+  }
+  .assignee-avatar {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 9.5px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.02em;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.25);
+  }
+  .assignee-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .assignee-unassigned { color: var(--muted); font-size: 12px; font-style: italic; }
+
+  /* Due-date badges */
+  .due-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    background: var(--bg);
+  }
+  .due-badge.due-soon { color: #9a6a00; border-color: #fdab3d; background: rgba(253,171,61,0.14); }
+  .due-badge.due-overdue { color: #fff; border-color: var(--danger); background: var(--danger); }
+
+  /* Card meta row (assignee + due) */
+  .card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 9px;
+    position: relative;
+    z-index: 3;
+  }
+
+  /* Assignment box in the detail modal */
+  .assign-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  @media (max-width: 620px) { .assign-grid { grid-template-columns: 1fr; } }
+  .assign-field { display: flex; flex-direction: column; gap: 5px; }
+  .assign-field label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .assign-field input {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    font-size: 14px;
+    background: var(--card-bg);
+    color: var(--text);
+  }
+
+  /* Activity / audit log */
+  .activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+  .activity-entry {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 7px 4px;
+    border-bottom: 1px dashed var(--border);
+    font-size: 13px;
+  }
+  .activity-entry:last-child { border-bottom: none; }
+  .activity-user {
+    flex: 0 0 auto;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .activity-text { flex: 1; color: var(--text); word-break: break-word; }
+  .activity-time { flex: 0 0 auto; font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+  .activity-clear {
+    margin-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+  }
 </style>
 <script>
   // Set theme + skin before first paint to avoid a flash of the wrong look.
@@ -2205,6 +2315,11 @@
           <div class="chip-group" id="pileChips"></div>
         </div>
 
+        <div class="toolbar-row">
+          <span class="toolbar-label">👤 Assignee</span>
+          <select class="status-filter" id="assigneeFilterSelect"></select>
+        </div>
+
         <div class="toolbar-row toolbar-row-last">
           <span class="toolbar-label">🔖 Presets</span>
           <div class="preset-row">
@@ -2233,6 +2348,8 @@
       <div class="missions-panel" id="notesPanel"></div>
 
       <div class="missions-panel" id="statsPanel"></div>
+
+      <div class="missions-panel" id="activityPanel"></div>
 
       <div class="view-controls-row" id="viewControlsRow">
         <button class="btn" id="addProjectBtn">+ Add Project</button>
@@ -2515,6 +2632,10 @@ function migrateState(parsed) {
       p.notes = [];
     }
 
+    // Assignee + due date (added later).
+    if (typeof p.assignee !== "string") p.assignee = "";
+    if (typeof p.dueDate !== "string") p.dueDate = "";
+
     // Quests (stored as `todos`): ensure new fields (description + sub-missions)
     if (!Array.isArray(p.todos)) p.todos = [];
     p.todos.forEach(t => {
@@ -2567,6 +2688,9 @@ function migrateState(parsed) {
   if (parsed.ui.discardCollapsed === undefined) parsed.ui.discardCollapsed = true;
   if (parsed.ui.notesCollapsed === undefined) parsed.ui.notesCollapsed = false;
   if (parsed.ui.statsCollapsed === undefined) parsed.ui.statsCollapsed = true;
+  if (parsed.ui.activityCollapsed === undefined) parsed.ui.activityCollapsed = true;
+  if (typeof parsed.ui.assigneeFilter !== "string") parsed.ui.assigneeFilter = "all";
+  if (!Array.isArray(parsed.activity)) parsed.activity = [];
   if (!Array.isArray(parsed.filterPresets)) parsed.filterPresets = [];
   if (typeof parsed.generalNotes === "string") {
     parsed.generalNotes = parsed.generalNotes.trim() ? [{ text: parsed.generalNotes }] : [];
@@ -2603,6 +2727,7 @@ function loadState() {
         projects: [],
         globalMissions: [],
         generalNotes: [],
+        activity: [],
         filterPresets: [],
         seedMerged: true,
         ui: {
@@ -2611,6 +2736,7 @@ function loadState() {
           statusFilters: STAGES.map((s, i) => i),
           todoFilters: ["hasOpen", "none"],
           pileFilters: ["deck"],
+          assigneeFilter: "all",
           sortBy: "default",
           searchQuery: "",
           theme: "light",
@@ -2618,7 +2744,8 @@ function loadState() {
           missionsCollapsed: false,
           discardCollapsed: true,
           notesCollapsed: false,
-          statsCollapsed: true
+          statsCollapsed: true,
+          activityCollapsed: true
         }
       };
     }
@@ -2629,6 +2756,7 @@ function loadState() {
     projects: buildDefaultProjects(),
     globalMissions: [],
     generalNotes: [],
+    activity: [],
     filterPresets: [],
     seedMerged: true,
     ui: {
@@ -2637,6 +2765,7 @@ function loadState() {
       statusFilters: STAGES.map((s, i) => i),
       todoFilters: ["hasOpen", "none"],
       pileFilters: ["deck"],
+      assigneeFilter: "all",
       sortBy: "default",
       searchQuery: "",
       theme: "light",
@@ -2644,7 +2773,8 @@ function loadState() {
       missionsCollapsed: false,
       discardCollapsed: true,
       notesCollapsed: false,
-      statsCollapsed: true
+      statsCollapsed: true,
+      activityCollapsed: true
     }
   };
   try {
@@ -2721,6 +2851,7 @@ function sharedSnapshot() {
     projects: state.projects,
     globalMissions: state.globalMissions,
     generalNotes: state.generalNotes,
+    activity: state.activity,
     seedMerged: state.seedMerged
   };
 }
@@ -2731,6 +2862,7 @@ function applySharedData(remote) {
   if (Array.isArray(remote.projects)) state.projects = remote.projects;
   if (Array.isArray(remote.globalMissions)) state.globalMissions = remote.globalMissions;
   if (Array.isArray(remote.generalNotes)) state.generalNotes = remote.generalNotes;
+  if (Array.isArray(remote.activity)) state.activity = remote.activity;
   if (typeof remote.seedMerged === "boolean") state.seedMerged = remote.seedMerged;
   // Normalize shape (adds any missing fields on incoming records).
   state = migrateState(state);
@@ -2741,11 +2873,102 @@ function applySharedData(remote) {
 function rerenderAllData() {
   renderMissionsPanel();
   renderNotesPanel();
+  renderActivityPanel();
   renderAll();
   if (openDetailId) {
     if (state.projects.find(p => p.id === openDetailId)) renderDetail();
     else closeDetail();
   }
+}
+
+/* ---- Activity / audit trail ---- */
+const ACTIVITY_LIMIT = 300;
+let currentUserLabel = "You";
+
+function logActivity(text) {
+  if (applyingRemote) return; // don't log changes we received from someone else
+  if (!Array.isArray(state.activity)) state.activity = [];
+  state.activity.push({ ts: Date.now(), user: currentUserLabel, text });
+  if (state.activity.length > ACTIVITY_LIMIT) {
+    state.activity = state.activity.slice(-ACTIVITY_LIMIT);
+  }
+  saveState();
+  renderActivityPanel();
+}
+
+function timeAgo(ts) {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 45) return "just now";
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + (m === 1 ? " min ago" : " mins ago");
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + (h === 1 ? " hour ago" : " hours ago");
+  const d = Math.floor(h / 24);
+  if (d < 7) return d + (d === 1 ? " day ago" : " days ago");
+  return new Date(ts).toLocaleDateString();
+}
+
+/* ---- Assignee + due date helpers ---- */
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function knownAssignees() {
+  const set = new Set();
+  state.projects.forEach(p => { if (p.assignee) set.add(p.assignee); });
+  return [...set].sort((a, b) => a.localeCompare(b));
+}
+function assigneeInitials(name) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+// Deterministic color from a name, so each person gets a stable avatar hue.
+function assigneeColor(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+  return "hsl(" + h + ", 55%, 45%)";
+}
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+// Returns { label, state } where state is "overdue" | "soon" | "normal".
+function dueInfo(dateStr) {
+  if (!dateStr) return null;
+  const today = todayStr();
+  const diffDays = Math.round((new Date(dateStr + "T00:00:00") - new Date(today + "T00:00:00")) / 86400000);
+  let label;
+  if (diffDays === 0) label = "Due today";
+  else if (diffDays === 1) label = "Due tomorrow";
+  else if (diffDays === -1) label = "1 day overdue";
+  else if (diffDays < 0) label = (-diffDays) + " days overdue";
+  else label = "Due " + new Date(dateStr + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const s = diffDays < 0 ? "overdue" : (diffDays <= 2 ? "soon" : "normal");
+  return { label, state: s };
+}
+function assigneeChipEl(name) {
+  const chip = document.createElement("span");
+  chip.className = "assignee-chip";
+  const av = document.createElement("span");
+  av.className = "assignee-avatar";
+  av.style.background = assigneeColor(name);
+  av.textContent = assigneeInitials(name);
+  chip.appendChild(av);
+  const label = document.createElement("span");
+  label.className = "assignee-name";
+  label.textContent = name;
+  chip.appendChild(label);
+  return chip;
+}
+function dueBadgeEl(dateStr) {
+  const info = dueInfo(dateStr);
+  if (!info) return null;
+  const badge = document.createElement("span");
+  badge.className = "due-badge due-" + info.state;
+  badge.textContent = "📅 " + info.label;
+  return badge;
 }
 
 function loadSupabaseLib() {
@@ -2874,10 +3097,12 @@ function hideAuthOverlay() {
   if (ov) ov.classList.remove("visible");
 }
 function updateAuthUI(signedIn, session) {
+  const email = signedIn && session && session.user ? session.user.email : "";
+  // Label used in the activity log: the part before "@", or "You" when local.
+  currentUserLabel = email ? email.split("@")[0] : "You";
   const btn = document.getElementById("signOutBtn");
   if (btn) {
     btn.style.display = signedIn ? "" : "none";
-    const email = signedIn && session && session.user ? session.user.email : "";
     btn.title = email ? ("Signed in as " + email + " — sign out") : "Sign out";
   }
 }
@@ -2919,7 +3144,9 @@ function newProject(name, category) {
     mapImage: null,
     notes: [],
     todos: [],
-    pile: "deck"
+    pile: "deck",
+    assignee: "",
+    dueDate: ""
   };
 }
 
@@ -2932,13 +3159,17 @@ function passesMultiFilter(selected, totalCount, matchFn) {
 function isAllCategories() { return state.ui.categoryFilters.length === CATEGORIES.length; }
 
 function getFilteredProjects() {
-  const { categoryFilters, statusFilters, todoFilters, pileFilters, sortBy, searchQuery } = state.ui;
+  const { categoryFilters, statusFilters, todoFilters, pileFilters, sortBy, searchQuery, assigneeFilter } = state.ui;
   const query = (searchQuery || "").trim().toLowerCase();
   let result = state.projects.filter(p => {
     const openTodos = p.todos.filter(t => !t.done).length;
     if (!passesMultiFilter(categoryFilters, CATEGORIES.length, () => categoryFilters.includes(p.category))) return false;
     if (!passesMultiFilter(statusFilters, STAGES.length, () => statusFilters.includes(p.statusIndex))) return false;
     if (!passesMultiFilter(pileFilters, PILE_OPTIONS.length, () => pileFilters.includes(p.pile))) return false;
+    if (assigneeFilter && assigneeFilter !== "all") {
+      if (assigneeFilter === "__unassigned__") { if (p.assignee) return false; }
+      else if (p.assignee !== assigneeFilter) return false;
+    }
     if (!passesMultiFilter(todoFilters, 2, () => {
       return (todoFilters.includes("hasOpen") && openTodos > 0) ||
              (todoFilters.includes("none") && p.todos.length === 0);
@@ -2972,6 +3203,15 @@ function getFilteredProjects() {
       break;
     case "todos-desc":
       result.sort((a, b) => (b.todos.filter(t => !t.done).length) - (a.todos.filter(t => !t.done).length));
+      break;
+    case "due-asc":
+      // Soonest due date first; projects with no due date go last.
+      result.sort((a, b) => {
+        if (!a.dueDate && !b.dueDate) return collator.compare(a.name, b.name);
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return a.dueDate.localeCompare(b.dueDate);
+      });
       break;
     default:
       if (categoryFilters.length !== 1) {
@@ -3100,6 +3340,26 @@ function renderToolbar() {
     onAll: () => { state.ui.pileFilters = PILE_OPTIONS.map(o => o.value); }
   });
 
+  const assigneeSelect = document.getElementById("assigneeFilterSelect");
+  const assignees = knownAssignees();
+  // If the selected assignee no longer exists, fall back to "all".
+  if (state.ui.assigneeFilter !== "all" && state.ui.assigneeFilter !== "__unassigned__"
+      && !assignees.includes(state.ui.assigneeFilter)) {
+    state.ui.assigneeFilter = "all";
+  }
+  let assigneeOpts = '<option value="all">Assignee: Everyone</option>'
+    + '<option value="__unassigned__">Unassigned</option>';
+  assignees.forEach(a => {
+    assigneeOpts += '<option value="' + a.replace(/"/g, "&quot;") + '">' + escapeHtml(a) + "</option>";
+  });
+  assigneeSelect.innerHTML = assigneeOpts;
+  assigneeSelect.value = state.ui.assigneeFilter;
+  assigneeSelect.onchange = () => {
+    state.ui.assigneeFilter = assigneeSelect.value;
+    saveState();
+    renderContent();
+  };
+
   const sortSelect = document.getElementById("sortSelect");
   sortSelect.innerHTML = `
     <option value="default">Sort: Default</option>
@@ -3108,6 +3368,7 @@ function renderToolbar() {
     <option value="status-asc">Status (early first)</option>
     <option value="status-desc">Status (late first)</option>
     <option value="todos-desc">${T("sortMostTodos")}</option>
+    <option value="due-asc">Due date (soonest first)</option>
   `;
   sortSelect.value = state.ui.sortBy;
   sortSelect.onchange = () => {
@@ -3158,6 +3419,7 @@ function resetFilters() {
   state.ui.pileFilters = ["deck"];
   state.ui.searchQuery = "";
   state.ui.sortBy = "default";
+  state.ui.assigneeFilter = "all";
   saveState();
   renderToolbar();
   renderContent();
@@ -3167,8 +3429,10 @@ function confirmAdd() {
   if (!name) return;
   const proj = newProject(name, addCategorySelect.value);
   state.projects.push(proj);
+  logActivity('added project "' + name + '"');
   saveState();
   addBar.classList.remove("visible");
+  renderToolbar();
   renderAll();
   openDetail(proj.id);
 }
@@ -3365,7 +3629,7 @@ function renderDiscardPile() {
       const restoreBtn = document.createElement("button");
       restoreBtn.className = "btn secondary small-btn";
       restoreBtn.textContent = "↩ Restore";
-      restoreBtn.addEventListener("click", () => setPile(proj, "deck"));
+      restoreBtn.addEventListener("click", () => { logActivity('restored "' + proj.name + '"'); setPile(proj, "deck"); });
       row.appendChild(restoreBtn);
 
       const delBtn = document.createElement("button");
@@ -3530,6 +3794,16 @@ function renderCardsView(projects) {
     `;
     card.appendChild(rules);
 
+    if (proj.assignee || proj.dueDate) {
+      const meta = document.createElement("div");
+      meta.className = "card-meta";
+      if (proj.assignee) meta.appendChild(assigneeChipEl(proj.assignee));
+      else { const sp = document.createElement("span"); sp.className = "assignee-unassigned"; sp.textContent = "Unassigned"; meta.appendChild(sp); }
+      const due = dueBadgeEl(proj.dueDate);
+      if (due) meta.appendChild(due);
+      card.appendChild(meta);
+    }
+
     if (proj.todos.length > 0) {
       const tooltip = document.createElement("div");
       tooltip.className = "card-quest-tooltip";
@@ -3598,6 +3872,8 @@ function renderTableView(projects) {
         <th>Project</th>
         <th>Kind</th>
         <th>Status</th>
+        <th>Assignee</th>
+        <th>Due</th>
         <th>${T("todosColumn")}</th>
         <th>Map</th>
         <th></th>
@@ -3635,6 +3911,17 @@ function renderTableView(projects) {
     const tdStatus = document.createElement("td");
     tdStatus.appendChild(statusPillEl(proj.statusIndex));
     tr.appendChild(tdStatus);
+
+    const tdAssignee = document.createElement("td");
+    if (proj.assignee) tdAssignee.appendChild(assigneeChipEl(proj.assignee));
+    else { const sp = document.createElement("span"); sp.className = "assignee-unassigned"; sp.textContent = "—"; tdAssignee.appendChild(sp); }
+    tr.appendChild(tdAssignee);
+
+    const tdDue = document.createElement("td");
+    const dueEl = dueBadgeEl(proj.dueDate);
+    if (dueEl) tdDue.appendChild(dueEl);
+    else tdDue.textContent = "—";
+    tr.appendChild(tdDue);
 
     const doneCount = proj.todos.filter(t => t.done).length;
     const tdTodos = document.createElement("td");
@@ -3674,7 +3961,9 @@ function deleteProject(id) {
   if (!proj) return;
   if (confirm(`Permanently trash "${proj.name}"? This cannot be undone.`)) {
     state.projects = state.projects.filter(p => p.id !== id);
+    logActivity('permanently deleted "' + proj.name + '"');
     saveState();
+    renderToolbar();
     if (openDetailId === id) {
       closeDetail();
     } else {
@@ -3693,6 +3982,7 @@ function trashCard(id) {
   const previousPile = proj.pile;
   const name = proj.name;
   proj.pile = "discard";
+  logActivity('moved "' + name + '" to ' + (isFantasy() ? "Discard" : "Irrelevant"));
   saveState();
   renderAll();
   if (openDetailId === id) renderDetail();
@@ -3772,6 +4062,7 @@ function importBackup(file) {
     renderToolbar();
     renderMissionsPanel();
     renderNotesPanel();
+    renderActivityPanel();
     renderAll();
     alert("Backup imported successfully.");
   };
@@ -3885,10 +4176,78 @@ function renderDetail() {
 
   const stack = document.createElement("div");
   stack.className = "detail-stack";
+  stack.appendChild(renderAssignmentBox(proj));
   stack.appendChild(renderQuestLog(proj));
   stack.appendChild(renderProjectNotesBox(proj));
   stack.appendChild(renderMapBox(proj));
   detailBody.appendChild(stack);
+}
+
+function renderAssignmentBox(proj) {
+  const box = document.createElement("div");
+  box.className = "section-box";
+  const h4 = document.createElement("h4");
+  h4.textContent = "🧭 Assignment";
+  box.appendChild(h4);
+
+  const grid = document.createElement("div");
+  grid.className = "assign-grid";
+
+  // Assignee
+  const aField = document.createElement("div");
+  aField.className = "assign-field";
+  const aLabel = document.createElement("label");
+  aLabel.textContent = "Assignee";
+  const aInput = document.createElement("input");
+  aInput.type = "text";
+  aInput.placeholder = "Unassigned";
+  aInput.value = proj.assignee || "";
+  aInput.setAttribute("list", "assigneeOptions");
+  applyBidi(aInput, aInput.value);
+  const dl = document.createElement("datalist");
+  dl.id = "assigneeOptions";
+  knownAssignees().forEach(name => {
+    const o = document.createElement("option");
+    o.value = name;
+    dl.appendChild(o);
+  });
+  function commitAssignee() {
+    const v = aInput.value.trim();
+    if (v === (proj.assignee || "")) return;
+    proj.assignee = v;
+    logActivity(v ? ('assigned "' + proj.name + '" to ' + v) : ('unassigned "' + proj.name + '"'));
+    persistAndRefresh();
+    renderToolbar(); // refresh the assignee filter list with any new name
+  }
+  aInput.addEventListener("change", commitAssignee);
+  aInput.addEventListener("blur", commitAssignee);
+  aInput.addEventListener("keydown", e => { if (e.key === "Enter") aInput.blur(); });
+  aField.appendChild(aLabel);
+  aField.appendChild(aInput);
+  aField.appendChild(dl);
+  grid.appendChild(aField);
+
+  // Due date
+  const dField = document.createElement("div");
+  dField.className = "assign-field";
+  const dLabel = document.createElement("label");
+  dLabel.textContent = "Due date";
+  const dInput = document.createElement("input");
+  dInput.type = "date";
+  dInput.value = proj.dueDate || "";
+  dInput.addEventListener("change", () => {
+    const v = dInput.value || "";
+    if (v === (proj.dueDate || "")) return;
+    proj.dueDate = v;
+    logActivity(v ? ('set due date for "' + proj.name + '" to ' + v) : ('cleared due date for "' + proj.name + '"'));
+    persistAndRefresh();
+  });
+  dField.appendChild(dLabel);
+  dField.appendChild(dInput);
+  grid.appendChild(dField);
+
+  box.appendChild(grid);
+  return box;
 }
 
 function persistAndRefresh() {
@@ -3910,7 +4269,10 @@ function renderStepper(proj) {
     const dotBorder = i <= proj.statusIndex ? stage.color : "var(--border)";
     step.innerHTML = `<div class="dot" style="background:${dotBg};border-color:${dotBorder}">${i < proj.statusIndex ? "&#10003;" : i + 1}</div><div class="label">${stage.name}</div>`;
     step.addEventListener("click", () => {
-      proj.statusIndex = i;
+      if (proj.statusIndex !== i) {
+        proj.statusIndex = i;
+        logActivity('set "' + proj.name + '" to ' + stage.name);
+      }
       persistAndRefresh();
     });
     stepper.appendChild(step);
@@ -4044,6 +4406,7 @@ function renderQuestLog(proj) {
     const val = input.value.trim();
     if (!val) return;
     proj.todos.push({ text: val, description: "", subs: [], done: false });
+    logActivity('added ' + (isFantasy() ? "quest" : "to-do") + ' "' + val + '" to "' + proj.name + '"');
     input.value = "";
     persistAndRefresh();
   }
@@ -4106,7 +4469,11 @@ function renderQuestCard(proj, quest, idx) {
   toggle.className = "entry-toggle quest-seal";
   toggle.setAttribute("aria-label", quest.done ? "Mark incomplete" : "Mark complete");
   toggle.textContent = quest.done ? "✓" : "";
-  toggle.addEventListener("click", () => { quest.done = !quest.done; persistAndRefresh(); });
+  toggle.addEventListener("click", () => {
+    quest.done = !quest.done;
+    logActivity((quest.done ? "completed " : "reopened ") + (isFantasy() ? "quest" : "to-do") + ' "' + quest.text + '" on "' + proj.name + '"');
+    persistAndRefresh();
+  });
   head.appendChild(toggle);
 
   const name = document.createElement("span");
@@ -4524,6 +4891,90 @@ function renderStatsPanel() {
   panel.appendChild(body);
 }
 
+function renderActivityPanel() {
+  const panel = document.getElementById("activityPanel");
+  if (!panel) return;
+  panel.innerHTML = "";
+  appendCornerMarks(panel);
+
+  const header = document.createElement("div");
+  header.className = "missions-header";
+
+  const chevron = document.createElement("span");
+  chevron.className = "missions-chevron";
+  chevron.textContent = state.ui.activityCollapsed ? "▸" : "▾";
+  header.appendChild(chevron);
+
+  const title = document.createElement("h2");
+  title.textContent = "🕰️ Activity";
+  header.appendChild(title);
+
+  const countBadge = document.createElement("span");
+  countBadge.className = "missions-count";
+  countBadge.textContent = state.activity.length + " logged";
+  header.appendChild(countBadge);
+
+  header.addEventListener("click", () => {
+    state.ui.activityCollapsed = !state.ui.activityCollapsed;
+    saveState();
+    renderActivityPanel();
+  });
+  panel.appendChild(header);
+
+  if (state.ui.activityCollapsed) return;
+
+  const body = document.createElement("div");
+  body.className = "missions-body";
+
+  if (state.activity.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "missions-empty";
+    empty.textContent = "No activity yet. Changes you and your team make will show up here.";
+    body.appendChild(empty);
+  } else {
+    const list = document.createElement("div");
+    list.className = "activity-list";
+    // Newest first.
+    state.activity.slice().reverse().forEach(entry => {
+      const row = document.createElement("div");
+      row.className = "activity-entry";
+      const user = document.createElement("span");
+      user.className = "activity-user";
+      user.textContent = entry.user || "Someone";
+      row.appendChild(user);
+      const text = document.createElement("span");
+      text.className = "activity-text";
+      text.textContent = entry.text;
+      // Keep the line LTR (English structure); embedded RTL names still render.
+      text.dir = "ltr";
+      row.appendChild(text);
+      const time = document.createElement("span");
+      time.className = "activity-time";
+      time.textContent = timeAgo(entry.ts);
+      time.title = new Date(entry.ts).toLocaleString();
+      row.appendChild(time);
+      list.appendChild(row);
+    });
+    body.appendChild(list);
+
+    const clearRow = document.createElement("div");
+    clearRow.className = "activity-clear";
+    const clearBtn = document.createElement("button");
+    clearBtn.className = "btn secondary small-btn";
+    clearBtn.textContent = "Clear activity log";
+    clearBtn.addEventListener("click", () => {
+      if (!confirm("Clear the activity log for everyone? This cannot be undone.")) return;
+      state.activity = [];
+      saveState();
+      renderActivityPanel();
+    });
+    clearRow.appendChild(clearBtn);
+    body.appendChild(clearRow);
+  }
+
+  panel.appendChild(body);
+}
+
 function renderNotesPanel() {
   const panel = document.getElementById("notesPanel");
   panel.innerHTML = "";
@@ -4682,6 +5133,7 @@ presetNameInput.addEventListener("keydown", e => { if (e.key === "Enter") confir
 renderToolbar();
 renderMissionsPanel();
 renderNotesPanel();
+renderActivityPanel();
 renderAll();
 
 // Login gate wiring.
