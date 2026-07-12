@@ -2312,7 +2312,7 @@ const STORAGE_KEY = "projectTrackerStateV2";
    Only the shared data is synced. Your personal view (filters,
    search, sort, theme, card style) stays local to your browser.
    ============================================================ */
-const SUPABASE_URL = "https://gztzqkjihoexjlrldsfx.supabase.co/rest/v1/";        // e.g. "https://abcdefgh.supabase.co"
+const SUPABASE_URL = "https://gztzqkjihoexjlrldsfx.supabase.co";        // e.g. "https://abcdefgh.supabase.co" (no path on the end)
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6dHpxa2ppaG9leGpscmxkc2Z4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4MzMwNDMsImV4cCI6MjA5OTQwOTA0M30.f94XBtlv4zInHNh-PbrZFzeAFRinqdmGXu7bRD688X0";   // your project's public "anon" key
 const SHARED_ROW_ID = "main";   // the shared workspace id (leave as-is)
 
@@ -2650,7 +2650,10 @@ async function initBackend() {
   setSyncStatus("connecting", "Connecting…");
   try {
     await loadSupabaseLib();
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Normalize the URL: the library adds "/rest/v1/" itself, so strip any
+    // trailing slash or "/rest/v1" a user may have pasted from the API page.
+    const baseUrl = SUPABASE_URL.trim().replace(/\/+$/, "").replace(/\/rest\/v1$/, "");
+    supabaseClient = window.supabase.createClient(baseUrl, SUPABASE_ANON_KEY);
 
     // Pull the shared workspace (if it exists yet).
     const { data, error } = await supabaseClient
