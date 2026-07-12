@@ -1,0 +1,4460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #efe3c4;
+    --card-bg: #f8efd9;
+    --border: #d5c193;
+    --text: #43351f;
+    --muted: #8a7550;
+    --accent: #0073ea;
+    --accent-dark: #0060c2;
+    --danger: #c43a3a;
+    --danger-soft: #f3ddd0;
+    --row-hover: #f1e6c8;
+    --problem-text: #a03418;
+    --radius: 10px;
+    --font-display: 'Cinzel', Georgia, 'Times New Roman', serif;
+    --gold: #b08c3c;
+    --gold-bright: #e8cb84;
+    --table-felt-1: #7a5a33;
+    --table-felt-2: #4e371c;
+    /* Parchment scroll (light = aged paper) */
+    --parch-1: #f6ead0;
+    --parch-2: #e4cf9f;
+    --parch-ink: #4a3720;
+    --parch-ink-soft: #6f5836;
+    --parch-edge: #b1914f;
+    --roll-dark: #5c421f;
+    --roll-light: #cbaa6a;
+    --parch-rule-bg: rgba(120,85,40,0.10);
+    --parch-mottle-hi: rgba(255,244,214,0.18);
+    --parch-mottle-lo: rgba(90,58,22,0.16);
+    /* Shared mottled-parchment surface for large panels (soft, uneven aging) */
+    --panel-parch:
+      radial-gradient(ellipse 42% 34% at 83% 9%, var(--parch-mottle-lo), transparent 72%),
+      radial-gradient(ellipse 38% 46% at 9% 90%, var(--parch-mottle-lo), transparent 72%),
+      radial-gradient(ellipse at 22% 16%, var(--parch-mottle-hi), transparent 48%),
+      linear-gradient(180deg, var(--parch-1), var(--parch-2));
+  }
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #1d1710;
+    --card-bg: #2a2114;
+    --border: #453722;
+    --text: #e5d5ae;
+    --muted: #a18a5e;
+    --accent: #3b9eff;
+    --accent-dark: #2c86e0;
+    --danger: #ff5c72;
+    --danger-soft: rgba(255,92,114,0.16);
+    --row-hover: rgba(216,181,101,0.10);
+    --problem-text: #ff8a65;
+    --gold: #d8b565;
+    --gold-bright: #f0d9a0;
+    --table-felt-1: #241c14;
+    --table-felt-2: #100c08;
+    /* Parchment scroll (dark = weathered leather / burnt parchment) */
+    --parch-1: #3d2e1b;
+    --parch-2: #241a0f;
+    --parch-ink: #ecd9ad;
+    --parch-ink-soft: #bd9f6d;
+    --parch-edge: #5a4227;
+    --roll-dark: #170f08;
+    --roll-light: #55401f;
+    --parch-rule-bg: rgba(0,0,0,0.24);
+    --parch-mottle-hi: rgba(255,225,170,0.08);
+    --parch-mottle-lo: rgba(0,0,0,0.28);
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--table-felt-2); }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(255,205,130,0.14), transparent 42%),
+      radial-gradient(circle at 12% 15%, rgba(255,190,110,0.12), transparent 30%),
+      radial-gradient(circle at 88% 12%, rgba(255,190,110,0.10), transparent 28%),
+      radial-gradient(circle at 50% 105%, rgba(0,0,0,0.6), transparent 55%),
+      radial-gradient(ellipse at top, rgba(255,255,255,0.06), transparent 60%),
+      repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 5px),
+      linear-gradient(160deg, var(--table-felt-1) 0%, var(--table-felt-2) 100%);
+    background-attachment: fixed;
+    color: var(--text);
+    padding: 28px;
+    transition: background 0.3s ease, color 0.2s ease;
+    position: relative;
+    min-height: 100vh;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    box-shadow: inset 0 0 160px rgba(0,0,0,0.6), inset 0 0 60px rgba(0,0,0,0.4);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .ambient-embers {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .ambient-embers span {
+    position: absolute;
+    bottom: -10px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,205,140,0.95), rgba(255,140,50,0));
+    animation: emberFloat linear infinite;
+  }
+  @keyframes emberFloat {
+    0% { transform: translate(0, 0); opacity: 0; }
+    8% { opacity: 0.75; }
+    92% { opacity: 0.3; }
+    100% { transform: translate(18px, -105vh); opacity: 0; }
+  }
+  .page {
+    max-width: 2000px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+  .layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  .main-column {
+    flex: 1;
+    min-width: 0;
+  }
+  @media (max-width: 1050px) {
+    .layout { flex-direction: column; }
+    .toolbar, .hand-strip {
+      position: static !important;
+      width: 100% !important;
+      max-height: none !important;
+    }
+    .toolbar-scroll { max-height: none !important; }
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-size: 36px;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+    text-align: center;
+    letter-spacing: 0.06em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    background: linear-gradient(100deg, var(--gold) 0%, var(--gold-bright) 25%, #fff8e0 50%, var(--gold-bright) 75%, var(--gold) 100%);
+    background-size: 220% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: titleShimmer 5s linear infinite, titleGlow 3.2s ease-in-out infinite;
+  }
+  @keyframes titleShimmer {
+    0% { background-position: 220% center; }
+    100% { background-position: -220% center; }
+  }
+  @keyframes titleGlow {
+    0%, 100% { filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5)) drop-shadow(0 0 10px rgba(232,203,132,0.25)); }
+    50% { filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5)) drop-shadow(0 0 22px rgba(232,203,132,0.55)); }
+  }
+  h1::before, h1::after {
+    content: "\25C6";
+    font-size: 14px;
+    color: var(--gold);
+    -webkit-text-fill-color: var(--gold);
+  }
+  .header-divider {
+    width: min(70%, 460px);
+    margin: 0 auto 24px auto;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold) 50%, transparent);
+    position: relative;
+  }
+  .header-divider span {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) rotate(45deg);
+    width: 8px;
+    height: 8px;
+    background: var(--gold-bright);
+    box-shadow: 0 0 8px rgba(232,203,132,0.7);
+  }
+
+  /* Toolbar (left sidebar) */
+  .toolbar {
+    flex: 0 0 320px;
+    width: 320px;
+    background: var(--panel-parch);
+    border: 2px solid var(--gold);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    position: sticky;
+    top: 20px;
+    z-index: 20;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .toolbar::before {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border: 1px solid var(--gold-bright);
+    opacity: 0.35;
+    border-radius: 7px;
+    pointer-events: none;
+  }
+  .toolbar-scroll {
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 12px 16px;
+  }
+  .toolbar-row {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .toolbar-row-last { border-bottom: none; padding-bottom: 2px; }
+  .toolbar-row:first-child { padding-top: 2px; }
+  .toolbar-label {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--gold);
+  }
+  .frame-corner {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: var(--gold);
+    transform: rotate(45deg);
+    pointer-events: none;
+    z-index: 2;
+    box-shadow: 0 0 4px rgba(0,0,0,0.3);
+  }
+  .frame-corner.tl { top: -5px; left: -5px; }
+  .frame-corner.tr { top: -5px; right: -5px; }
+  .frame-corner.bl { bottom: -5px; left: -5px; }
+  .frame-corner.br { bottom: -5px; right: -5px; }
+  .search-input {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    min-width: 180px;
+    background: var(--card-bg);
+    color: var(--text);
+  }
+  .summary-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    font-size: 12.5px;
+    color: #efe0b8; /* sits directly on the wood desk in both themes */
+    text-shadow: 0 1px 2px rgba(0,0,0,0.55);
+    padding: 0 4px;
+    margin-bottom: 16px;
+  }
+  .summary-bar .summary-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 5px;
+  }
+  .summary-bar .summary-warning { color: var(--danger); font-weight: 600; }
+  .view-controls-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 14px;
+    margin: 4px 0 20px;
+  }
+  .btn {
+    cursor: pointer;
+    border: 1px solid rgba(0,0,0,0.2);
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 13.5px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    background: linear-gradient(180deg, var(--accent) 0%, var(--accent-dark) 100%);
+    color: #fff;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 2px 4px rgba(0,0,0,0.2);
+    transition: transform 0.1s ease, box-shadow 0.15s ease, background 0.15s ease;
+  }
+  .btn:hover {
+    background: linear-gradient(180deg, var(--accent-dark) 0%, var(--accent) 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 4px 10px rgba(0,0,0,0.3);
+    transform: translateY(-1px);
+  }
+  .btn:active { transform: translateY(0); box-shadow: inset 0 2px 4px rgba(0,0,0,0.3); }
+  .btn.secondary {
+    background: var(--card-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    font-weight: 500;
+    box-shadow: none;
+  }
+  .btn.secondary:hover { background: var(--row-hover); box-shadow: none; transform: none; }
+
+  .segmented {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .segmented button {
+    border: none;
+    background: var(--card-bg);
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .segmented button.active {
+    background: linear-gradient(180deg, var(--accent) 0%, var(--accent-dark) 100%);
+    color: #fff;
+    font-family: var(--font-display);
+  }
+  .segmented button:not(.active):hover { background: var(--row-hover); }
+
+  .chip-group {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .chip {
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 12.5px;
+    font-weight: 700;
+    font-family: var(--font-display);
+    cursor: pointer;
+    color: var(--muted);
+  }
+  .chip:hover { background: var(--row-hover); }
+  .chip.active {
+    color: #fff;
+    border-color: transparent;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 2px 5px rgba(0,0,0,0.25);
+  }
+
+  select.status-filter {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--card-bg);
+  }
+
+  .spacer { flex: 1; }
+
+  /* Quick add bar */
+  .add-bar {
+    display: none;
+    gap: 10px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .add-bar.visible { display: flex; }
+  .add-bar input[type="text"] {
+    flex: 1;
+    min-width: 200px;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  .add-bar select {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-align: center;
+    padding: 70px 20px;
+    background: var(--card-bg);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+  }
+  .empty-state .empty-icon { font-size: 42px; line-height: 1; }
+  .empty-state h3 { margin: 0; font-size: 16px; }
+  .empty-state p { margin: 0; color: var(--muted); font-size: 13px; }
+  .empty-state .btn { margin-top: 6px; }
+
+  /* Missions panel */
+  .missions-panel {
+    background: var(--panel-parch);
+    border: 2px solid var(--gold);
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    overflow: hidden;
+    position: relative;
+  }
+  .corner-mark {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: var(--gold);
+    transform: rotate(45deg);
+    pointer-events: none;
+    opacity: 0.85;
+    z-index: 2;
+  }
+  .corner-mark.tl { top: 7px; left: 7px; }
+  .corner-mark.tr { top: 7px; right: 7px; }
+  .corner-mark.bl { bottom: 7px; left: 7px; }
+  .corner-mark.br { bottom: 7px; right: 7px; }
+  .missions-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    cursor: pointer;
+    background: linear-gradient(90deg, rgba(201,162,75,0.14), transparent);
+    user-select: none;
+  }
+  .missions-header h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 16px;
+    color: var(--gold);
+    flex: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .missions-count {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    background: var(--bg);
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+  .missions-chevron {
+    color: var(--gold);
+    font-size: 14px;
+    width: 14px;
+    text-align: center;
+  }
+  .missions-body { padding: 4px 18px 16px 18px; }
+  .missions-empty {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 10px 0;
+    text-align: center;
+  }
+
+  /* Hand strip */
+  .hand-strip {
+    flex: 0 0 340px;
+    width: 340px;
+    background: var(--panel-parch);
+    border: 2px solid var(--gold);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    position: sticky;
+    top: 20px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .hand-strip-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    background: var(--card-bg);
+    background-image: linear-gradient(90deg, rgba(201,162,75,0.14), transparent);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  .hand-strip-header h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 16px;
+    color: var(--gold);
+    flex: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .hand-strip-count {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    background: var(--bg);
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+  .hand-strip-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 4px 14px 14px 14px;
+  }
+  .hand-strip-empty {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 4px 18px 18px 18px;
+    text-align: center;
+  }
+  .hand-strip-empty-icon {
+    font-size: 28px;
+    opacity: 0.4;
+    margin-bottom: 8px;
+  }
+  .hand-card {
+    --roll-h: 11px;
+    color: var(--parch-ink);
+    border: 1px solid var(--parch-edge);
+    border-radius: 6px;
+    padding: calc(var(--roll-h) + 8px) 12px calc(var(--roll-h) + 9px);
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    animation: pileCardIn 0.28s ease;
+    background-color: var(--parch-2);
+    background-image:
+      repeating-linear-gradient(90deg, rgba(0,0,0,0.16) 0 2px, transparent 2px 7px),
+      repeating-linear-gradient(90deg, rgba(0,0,0,0.16) 0 2px, transparent 2px 7px),
+      linear-gradient(180deg, var(--roll-dark), var(--roll-light) 42%, var(--roll-dark)),
+      linear-gradient(180deg, var(--roll-dark), var(--roll-light) 42%, var(--roll-dark)),
+      radial-gradient(ellipse at 25% 20%, var(--parch-mottle-hi), transparent 48%),
+      radial-gradient(ellipse at 80% 80%, var(--parch-mottle-lo), transparent 52%),
+      linear-gradient(180deg, var(--parch-1), var(--parch-2));
+    background-repeat: no-repeat;
+    background-position: top, bottom, top, bottom, center, center, center;
+    background-size: 100% var(--roll-h), 100% var(--roll-h), 100% var(--roll-h), 100% var(--roll-h), auto, auto, auto;
+    box-shadow:
+      0 3px 9px rgba(0,0,0,0.3),
+      inset 0 var(--roll-h) 7px -8px rgba(0,0,0,0.5),
+      inset 0 calc(-1 * var(--roll-h)) 7px -8px rgba(0,0,0,0.5),
+      inset 7px 0 9px -7px rgba(0,0,0,0.3),
+      inset -7px 0 9px -7px rgba(0,0,0,0.3);
+  }
+  .hand-card:hover {
+    transform: translateX(2px);
+    box-shadow:
+      0 5px 14px rgba(0,0,0,0.32),
+      inset 0 var(--roll-h) 7px -8px rgba(0,0,0,0.5),
+      inset 0 calc(-1 * var(--roll-h)) 7px -8px rgba(0,0,0,0.5),
+      inset 7px 0 9px -7px rgba(0,0,0,0.3),
+      inset -7px 0 9px -7px rgba(0,0,0,0.3);
+  }
+  .hand-card h4 {
+    margin: 0 0 8px 0;
+    font-size: 13.5px;
+    font-weight: 700;
+    font-family: var(--font-display);
+    color: var(--parch-ink);
+    text-align: center;
+  }
+  .hand-card-typeline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .hand-card-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .hand-card-actions .btn { padding: 5px 8px; font-size: 11.5px; }
+
+  /* Discard pile */
+  .discard-pile {
+    background: var(--panel-parch);
+    border: 1px solid var(--parch-edge);
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .discard-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    cursor: pointer;
+    background: rgba(0,0,0,0.12);
+  }
+  .discard-header h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--muted);
+    flex: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .discard-count {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    background: var(--bg);
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+  .discard-body { padding: 6px 18px 14px 18px; }
+  .discard-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    opacity: 0.75;
+    filter: grayscale(0.4);
+    transition: opacity 0.15s ease, filter 0.15s ease;
+    animation: pileCardIn 0.28s ease;
+  }
+  .discard-row:hover { opacity: 1; filter: grayscale(0); }
+  .discard-row:last-child { border-bottom: none; }
+  .discard-row .discard-name {
+    flex: 1;
+    cursor: pointer;
+    text-decoration: line-through;
+    text-decoration-color: var(--muted);
+    color: var(--muted);
+  }
+  .discard-row .btn { padding: 5px 10px; font-size: 11.5px; }
+
+  /* Footer bar: export/import/theme, at the very bottom of the page */
+  .footer-bar {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    background: var(--panel-parch);
+    border: 2px solid var(--gold);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-top: 4px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  }
+
+  /* Pile control (in project detail modal) */
+  .pile-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .pile-control-label {
+    font-family: var(--font-display);
+    font-size: 12px;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .project-card .card-to-hand {
+    background: rgba(0,0,0,0.25);
+    border: none;
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px 6px;
+    border-radius: 50%;
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 4;
+  }
+  .project-card .card-to-hand:hover { background: var(--gold); }
+
+  table.projects-table tbody tr.row-alt { background: var(--bg); }
+
+  /* Status-tinted backgrounds (cards + table rows) */
+  /* Status wash is layered into the scroll background via --status-wash
+     (a shorthand background here would wipe the parchment layers). */
+  .project-card.status-0 { --status-wash: #c4c4c420; }
+  .project-card.status-1 { --status-wash: #579bfc20; }
+  .project-card.status-2 { --status-wash: #fdab3d20; }
+  .project-card.status-3 { --status-wash: #a25ddc20; }
+  .project-card.status-4 { --status-wash: #00c87520; }
+  table.projects-table tbody tr.status-0 { background: #c4c4c420; }
+  table.projects-table tbody tr.status-1 { background: #579bfc20; }
+  table.projects-table tbody tr.status-2 { background: #fdab3d20; }
+  table.projects-table tbody tr.status-3 { background: #a25ddc20; }
+  table.projects-table tbody tr.status-4 { background: #00c87520; }
+
+  /* Category + status pills (shared) */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: var(--font-display);
+  }
+  /* Custom category icons (SVG scales with surrounding font-size) */
+  .cat-icon {
+    width: 1.15em;
+    height: 1.15em;
+    vertical-align: -0.2em;
+    flex: 0 0 auto;
+  }
+  .cat-icon-emoji { font-size: 1em; }
+  .modal-cat-icon .cat-icon {
+    width: 1.1em;
+    height: 1.1em;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.45));
+  }
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-weight: 700;
+    font-family: var(--font-display);
+    color: #fff;
+    white-space: nowrap;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.25);
+  }
+
+  /* Cards view */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 26px 16px;
+    perspective: 1200px;
+  }
+  .project-card {
+    --roll-h: 15px;
+    position: relative;
+    border: 1px solid var(--parch-edge);
+    border-radius: 7px;
+    padding: calc(var(--roll-h) + 11px) 16px calc(var(--roll-h) + 13px);
+    cursor: pointer;
+    color: var(--parch-ink);
+    transition: box-shadow 0.18s ease, transform 0.09s ease-out;
+    background-color: var(--parch-2);
+    background-image:
+      repeating-linear-gradient(90deg, rgba(0,0,0,0.16) 0 2px, transparent 2px 8px),
+      repeating-linear-gradient(90deg, rgba(0,0,0,0.16) 0 2px, transparent 2px 8px),
+      linear-gradient(180deg, var(--roll-dark), var(--roll-light) 42%, var(--roll-dark)),
+      linear-gradient(180deg, var(--roll-dark), var(--roll-light) 42%, var(--roll-dark)),
+      radial-gradient(ellipse at 22% 16%, var(--parch-mottle-hi), transparent 46%),
+      radial-gradient(ellipse at 82% 82%, var(--parch-mottle-lo), transparent 50%),
+      radial-gradient(ellipse at 60% 45%, var(--parch-mottle-lo), transparent 60%),
+      linear-gradient(var(--status-wash, transparent), var(--status-wash, transparent)),
+      linear-gradient(180deg, var(--parch-1), var(--parch-2));
+    background-repeat: no-repeat;
+    background-position: top, bottom, top, bottom, center, center, center, center, center;
+    background-size: 100% var(--roll-h), 100% var(--roll-h), 100% var(--roll-h), 100% var(--roll-h), auto, auto, auto, auto, auto;
+    box-shadow:
+      0 0 var(--glow-blur, 0px) var(--glow-color, transparent),
+      0 4px 12px rgba(0,0,0,0.35),
+      inset 0 var(--roll-h) 8px -8px rgba(0,0,0,0.5),
+      inset 0 calc(-1 * var(--roll-h)) 8px -8px rgba(0,0,0,0.5),
+      inset 8px 0 10px -8px rgba(0,0,0,0.32),
+      inset -8px 0 10px -8px rgba(0,0,0,0.32);
+  }
+  .project-card::before {
+    content: "";
+    position: absolute;
+    inset: calc(var(--roll-h) + 2px) 6px;
+    border: 1px solid var(--cat-color-soft, var(--parch-edge));
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .project-card:hover {
+    box-shadow:
+      0 0 var(--glow-blur, 0px) var(--glow-color, transparent),
+      0 14px 28px rgba(0,0,0,0.3),
+      inset 0 var(--roll-h) 8px -8px rgba(0,0,0,0.5),
+      inset 0 calc(-1 * var(--roll-h)) 8px -8px rgba(0,0,0,0.5),
+      inset 8px 0 10px -8px rgba(0,0,0,0.32),
+      inset -8px 0 10px -8px rgba(0,0,0,0.32);
+    transform: translateY(-4px) rotate(-0.5deg) scale(1.015);
+    z-index: 100;
+  }
+  .project-card.tier-legendary::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.4) 46%, rgba(255,255,255,0.4) 52%, transparent 68%);
+    background-size: 260% 260%;
+    animation: cardShimmer 3.2s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 2;
+    mix-blend-mode: overlay;
+  }
+  @keyframes cardShimmer {
+    0% { background-position: 200% 200%; }
+    100% { background-position: -60% -60%; }
+  }
+  .project-card.tier-rare { --tier-glow: 0 0 12px rgba(79,143,232,0.35); }
+  .project-card.tier-epic { --tier-glow: 0 0 16px rgba(162,93,220,0.45); }
+  .project-card.tier-legendary { --tier-glow: 0 0 22px rgba(232,185,35,0.55); }
+  .project-card.tier-rare, .project-card.tier-epic, .project-card.tier-legendary {
+    box-shadow:
+      0 0 var(--glow-blur, 0px) var(--glow-color, transparent),
+      var(--tier-glow),
+      0 4px 12px rgba(0,0,0,0.35),
+      inset 0 var(--roll-h) 8px -8px rgba(0,0,0,0.5),
+      inset 0 calc(-1 * var(--roll-h)) 8px -8px rgba(0,0,0,0.5),
+      inset 8px 0 10px -8px rgba(0,0,0,0.32),
+      inset -8px 0 10px -8px rgba(0,0,0,0.32);
+  }
+  .tier-banner {
+    text-align: center;
+    font-family: var(--font-display);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 0;
+    margin: -2px 0 8px 0;
+    border-radius: 4px;
+    color: #fff;
+  }
+  .tier-banner.tier-rare { background: linear-gradient(90deg, #3f7cd4, #7fb1f5); }
+  .tier-banner.tier-epic { background: linear-gradient(90deg, #8a3fc9, #d68fff); }
+  .tier-banner.tier-legendary { background: linear-gradient(90deg, #d4a017, #fff2b0); color: #4a3800; }
+  .card-corner {
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    background: var(--cat-color, var(--accent));
+    transform: rotate(45deg);
+    pointer-events: none;
+    z-index: 3;
+  }
+  .card-corner.tl { top: -5px; left: -5px; }
+  .card-corner.tr { top: -5px; right: -5px; }
+  .card-corner.bl { bottom: -5px; left: -5px; }
+  .card-corner.br { bottom: -5px; right: -5px; }
+  .card-header {
+    position: relative;
+    z-index: 3;
+    margin: 0 0 9px 0;
+    text-align: center;
+  }
+  /* Name on a category-colored ribbon banner with notched ends */
+  .card-header h3 {
+    display: inline-block;
+    max-width: 94%;
+    margin: 0;
+    padding: 5px 20px;
+    background:
+      linear-gradient(165deg, rgba(255,255,255,0.30) 0%, rgba(0,0,0,0.26) 100%),
+      var(--cat-color, var(--accent));
+    background-blend-mode: overlay;
+    clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 8px 100%, 0 50%);
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: 14.5px;
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: 0.02em;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+  /* Art window: engraved parchment panel with the category illustration */
+  .card-art {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 2px 10px;
+    padding: 11px 0;
+    border: 1px solid var(--parch-edge);
+    border-radius: 5px;
+    background:
+      radial-gradient(circle at 50% 42%, var(--parch-mottle-hi), transparent 68%),
+      repeating-linear-gradient(45deg, var(--parch-rule-bg) 0 1px, transparent 1px 7px),
+      linear-gradient(180deg, var(--parch-2), var(--parch-1));
+    box-shadow: inset 0 1px 5px rgba(0,0,0,0.2);
+  }
+  .card-art .cat-icon {
+    width: 2.7em;
+    height: 2.7em;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,0.28));
+  }
+  .card-art .cat-icon-emoji {
+    font-size: 2.3em;
+    line-height: 1;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,0.28));
+  }
+  .project-card .card-delete {
+    background: rgba(0,0,0,0.25);
+    border: none;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px 7px;
+    border-radius: 50%;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 4;
+  }
+  .project-card .card-delete:hover { background: var(--danger); }
+  .card-typeline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px dashed var(--parch-edge);
+    position: relative;
+    z-index: 3;
+  }
+  .card-rules {
+    background: var(--parch-rule-bg);
+    border: 1px solid var(--parch-edge);
+    border-radius: 5px;
+    padding: 9px 11px;
+    font-size: 12px;
+    font-style: italic;
+    font-family: Georgia, 'Times New Roman', serif;
+    color: var(--parch-ink-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    position: relative;
+    z-index: 3;
+  }
+  .card-rules .rule-line { display: flex; align-items: center; gap: 6px; }
+  .card-rules .has-problems { color: var(--danger); font-weight: 600; font-style: normal; }
+
+  .card-quest-tooltip {
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    top: calc(100% + 8px);
+    background: var(--panel-parch);
+    border: 2px solid var(--gold);
+    border-radius: 8px;
+    padding: 10px 12px;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+    z-index: 50;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    max-height: 240px;
+    overflow-y: auto;
+    text-align: left;
+    transition: opacity 0.15s ease, visibility 0s linear 0.15s;
+  }
+  .project-card:hover .card-quest-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.15s ease 0.5s, visibility 0s linear 0.5s;
+  }
+  .card-quest-tooltip-title {
+    font-family: var(--font-display);
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .card-quest-tooltip ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .card-quest-tooltip li {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 12.5px;
+    font-style: normal;
+    color: var(--text);
+  }
+  .card-quest-tooltip li.done {
+    color: var(--muted);
+    text-decoration: line-through;
+  }
+  .card-quest-tooltip .check-mark { flex: 0 0 auto; }
+  .card-stat-badge {
+    position: absolute;
+    bottom: -11px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    border: 2px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10.5px;
+    font-weight: 700;
+    font-family: var(--font-display);
+    color: var(--text);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    z-index: 3;
+  }
+  .card-stat-badge.left { left: 14px; }
+  .card-stat-badge.right { right: 14px; }
+  .card-stat-badge.danger { border-color: var(--danger); color: var(--danger); }
+
+  /* Table view */
+  .table-wrap {
+    background: var(--panel-parch);
+    border: 2px solid var(--gold);
+    border-radius: var(--radius);
+    overflow: auto;
+    max-height: 65vh;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+  }
+  table.projects-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  table.projects-table th {
+    text-align: left;
+    background: var(--bg);
+    color: var(--muted);
+    font-size: 12px;
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 12px 16px;
+    border-bottom: 2px solid var(--gold);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  table.projects-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  table.projects-table tr:last-child td { border-bottom: none; }
+  table.projects-table tbody tr {
+    cursor: pointer;
+    transition: background 0.1s ease;
+  }
+  table.projects-table tbody tr:hover { background: var(--row-hover); }
+  .table-name { font-weight: 700; font-size: 15.5px; }
+  .table-tier-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-inline-end: 6px;
+    vertical-align: middle;
+  }
+  .table-tier-dot.tier-rare { background: #4f8fe8; }
+  .table-tier-dot.tier-epic { background: #a25ddc; }
+  .table-tier-dot.tier-legendary { background: #e8b923; box-shadow: 0 0 4px #e8b923; }
+  .table-delete {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .table-delete:hover { color: var(--danger); }
+
+  /* Modal */
+  .modal-overlay {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    background: rgba(12, 14, 20, 0.62);
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    perspective: 1600px;
+    transition: opacity 0.18s ease, visibility 0.18s ease;
+  }
+  .modal-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+  /* The detail modal is styled as one giant collectible card. */
+  .modal-panel {
+    background: var(--card-bg);
+    border-radius: 16px;
+    border: 3px solid var(--gold);
+    width: 100%;
+    max-width: 720px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.3);
+    transform: translateY(22px) scale(0.94) rotateX(14deg);
+    transform-origin: center bottom;
+    opacity: 0;
+    transition: transform 0.3s cubic-bezier(.2,.85,.25,1), opacity 0.24s ease;
+    position: relative;
+  }
+  .modal-panel::after {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(201,162,75,0.45);
+    border-radius: 12px;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .modal-scroll {
+    max-height: 90vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-radius: 13px;
+    background:
+      radial-gradient(circle at 50% 0%, var(--modal-accent-soft, transparent), transparent 42%),
+      var(--panel-parch);
+  }
+  .modal-overlay.visible .modal-panel {
+    transform: translateY(0) scale(1) rotateX(0deg);
+    opacity: 1;
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 22px;
+    border-bottom: 2px solid var(--gold);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background:
+      linear-gradient(165deg, rgba(255,255,255,0.22) 0%, rgba(0,0,0,0.30) 100%),
+      var(--modal-accent, var(--card-bg));
+    background-blend-mode: overlay;
+    border-radius: 13px 13px 0 0;
+  }
+  .modal-cat-icon {
+    flex: 0 0 auto;
+    font-size: 24px;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.45));
+  }
+  .modal-header .title-input {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    flex: 1;
+    font-family: var(--font-display);
+    letter-spacing: 0.01em;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.45);
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: 6px;
+    padding: 6px 8px;
+    min-width: 0;
+  }
+  .modal-header .title-input::placeholder { color: rgba(255,255,255,0.6); }
+  .modal-header .title-input:hover {
+    border-color: rgba(255,255,255,0.4);
+  }
+  .modal-header .title-input:focus {
+    outline: none;
+    border-color: rgba(255,255,255,0.75);
+    background: rgba(0,0,0,0.18);
+  }
+  .modal-close {
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    color: rgba(255,255,255,0.85);
+    cursor: pointer;
+    line-height: 1;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  }
+  .modal-close:hover { color: #fff; }
+  .modal-body { padding: 22px 24px 26px; }
+  .modal-delete-btn {
+    background: rgba(0,0,0,0.18);
+    border: 1px solid rgba(255,255,255,0.45);
+    color: #fff;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  }
+  .modal-delete-btn:hover { background: var(--danger); border-color: var(--danger); }
+
+  /* Tier ribbon under the header band */
+  .modal-tier-ribbon { display: none; }
+  .modal-tier-ribbon.visible {
+    display: block;
+    position: sticky;
+    top: 60px;
+    z-index: 1;
+    text-align: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 11.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 5px 0;
+    box-shadow: inset 0 -1px 0 rgba(0,0,0,0.2), 0 2px 6px rgba(0,0,0,0.25);
+  }
+  .modal-tier-ribbon.tier-rare { background: linear-gradient(90deg, #3f7cd4, #7fb1f5); color: #fff; }
+  .modal-tier-ribbon.tier-epic { background: linear-gradient(90deg, #8a3fc9, #d68fff); color: #fff; }
+  .modal-tier-ribbon.tier-legendary {
+    background: linear-gradient(90deg, #b8860b, #fff2b0, #b8860b);
+    background-size: 200% 100%;
+    color: #4a3800;
+    animation: ribbonShimmer 3.2s linear infinite;
+  }
+  @keyframes ribbonShimmer { to { background-position: 200% 0; } }
+
+  /* Stepper */
+  .stepper {
+    display: flex;
+    justify-content: space-between;
+    margin: 4px 0 28px 0;
+    position: relative;
+  }
+  .stepper::before {
+    content: "";
+    position: absolute;
+    top: 15px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--border);
+    z-index: 0;
+    border-radius: 2px;
+  }
+  .step {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+  }
+  .step .dot {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    border: 3px solid var(--border);
+    margin: 0 auto 8px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    transition: all 0.15s ease;
+  }
+  .step .label {
+    font-size: 12px;
+    color: var(--muted);
+    padding: 0 4px;
+    font-weight: 500;
+  }
+  .step.done .dot { color: #fff; }
+  .step.done .label { font-weight: 600; }
+  .step.active .dot { color: #fff; box-shadow: 0 0 0 4px rgba(0,115,234,0.15); }
+  .step.active .label { font-weight: 700; color: var(--text); }
+
+  /* Sections grid inside modal */
+  .sections {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  @media (max-width: 620px) {
+    .sections { grid-template-columns: 1fr; }
+  }
+  .section-box {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .section-box h4 {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--gold);
+  }
+  /* Ink flourish after section headings */
+  .section-box h4::after {
+    content: " \2766";
+    font-size: 11px;
+    opacity: 0.55;
+    letter-spacing: 0;
+  }
+  .section-box.map-box { grid-column: 1 / -1; }
+
+  .map-preview {
+    max-width: 100%;
+    max-height: 300px;
+    display: block;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .map-placeholder {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .map-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+  .notes-box { margin-bottom: 0; }
+  .detail-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  /* Quest log — each quest is a mini card */
+  .quest-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .quest-card {
+    position: relative;
+    background: linear-gradient(180deg, var(--card-bg) 0%, var(--bg) 100%);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 9px;
+    padding: 10px 12px 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.14);
+    overflow: hidden;
+    transition: transform 0.12s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  }
+  .quest-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 7px 18px rgba(0,0,0,0.22);
+  }
+  /* faint crossed-swords watermark */
+  .quest-card::after {
+    content: "\2694";
+    position: absolute;
+    right: -4px;
+    bottom: -12px;
+    font-size: 56px;
+    line-height: 1;
+    color: var(--text);
+    opacity: 0.05;
+    transform: rotate(-12deg);
+    pointer-events: none;
+  }
+  .quest-card.done {
+    opacity: 0.62;
+    border-left-color: #00c875;
+  }
+  .quest-card-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    z-index: 1;
+  }
+  .quest-chevron {
+    flex: 0 0 auto;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 2px;
+  }
+  .quest-chevron:hover { color: var(--text); }
+  .quest-seal { border-color: var(--gold); }
+  /* Completed quests are stamped with a red wax seal */
+  .quest-card.done .quest-seal {
+    background: radial-gradient(circle at 35% 30%, #e05a5a, #a11220 55%, #7c0c17);
+    border-color: #7c0c17;
+    color: #ffd9c9;
+    border-radius: 47% 53% 50% 50% / 52% 48% 52% 48%;
+    box-shadow:
+      0 1px 3px rgba(0,0,0,0.4),
+      inset 0 -2px 4px rgba(0,0,0,0.35),
+      inset 0 2px 3px rgba(255,255,255,0.25);
+  }
+  .quest-card-head .quest-name {
+    flex: 1;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 14.5px;
+    word-break: break-word;
+    cursor: text;
+  }
+  .quest-card.done .quest-name { text-decoration: line-through; color: var(--muted); }
+  .quest-name.editable:hover, .quest-desc.editable:hover {
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 3px;
+  }
+  .quest-card.done .quest-name.editable:hover { text-decoration: line-through; }
+  .quest-pips {
+    flex: 0 0 auto;
+    display: inline-flex;
+    gap: 3px;
+    align-items: center;
+  }
+  .quest-pip {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    border: 1.5px solid var(--muted);
+    background: transparent;
+  }
+  .quest-pip.done { background: var(--accent); border-color: var(--accent); }
+  .quest-sub-count {
+    flex: 0 0 auto;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--font-display);
+    color: var(--muted);
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 2px 9px;
+  }
+  /* Description as inset serif "flavor text" */
+  .quest-desc {
+    position: relative;
+    z-index: 1;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--text);
+    margin: 9px 0 0 26px;
+    padding: 6px 11px;
+    border-left: 2px solid var(--gold);
+    background: rgba(201,162,75,0.07);
+    border-radius: 0 6px 6px 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    cursor: text;
+  }
+  .quest-desc.empty {
+    color: var(--muted);
+    background: transparent;
+    border-left-color: var(--border);
+  }
+  /* Sub-missions as an indented checklist scroll off a quest line */
+  .quest-subs {
+    position: relative;
+    z-index: 1;
+    margin: 11px 0 0 15px;
+    padding-left: 17px;
+    border-left: 2px solid var(--border);
+  }
+  .quest-sub-list { margin-bottom: 8px; }
+  .quest-sub-list .entry-item {
+    position: relative;
+    font-size: 12.5px;
+  }
+  .quest-sub-list .entry-item::before {
+    content: "";
+    position: absolute;
+    left: -17px;
+    top: 50%;
+    width: 13px;
+    height: 2px;
+    background: var(--border);
+  }
+  .quest-sub-input input[type="text"] { font-size: 12.5px; }
+  .quest-sub-input .small-btn { white-space: nowrap; }
+  .quest-card.collapsed .quest-desc,
+  .quest-card.collapsed .quest-subs { display: none; }
+
+  /* General notes list */
+  .item-input .note-input {
+    flex: 1;
+    min-height: 44px;
+    resize: vertical;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--card-bg);
+  }
+  .notes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  /* Notes styled as aged parchment scrolls (dark leather in dark mode) */
+  .note-entry {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: linear-gradient(135deg, var(--parch-1) 0%, var(--parch-2) 100%);
+    border: 1px solid var(--parch-edge);
+    border-left: 4px solid var(--gold);
+    border-radius: 6px;
+    padding: 11px 16px 11px 12px;
+    color: var(--parch-ink);
+    box-shadow: 0 2px 7px rgba(0,0,0,0.2), inset 0 0 26px var(--parch-mottle-lo);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .note-entry::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: 11px;
+    background: linear-gradient(90deg, transparent, var(--parch-mottle-lo));
+    border-radius: 0 6px 6px 0;
+    pointer-events: none;
+  }
+  .note-entry:hover {
+    transform: translateX(2px);
+    box-shadow: 0 5px 14px rgba(0,0,0,0.28), inset 0 0 26px var(--parch-mottle-lo);
+  }
+  .note-entry .note-icon {
+    flex: 0 0 auto;
+    font-size: 15px;
+    line-height: 1.4;
+    opacity: 0.9;
+  }
+  .note-entry .note-text {
+    flex: 1;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 13.5px;
+    color: var(--parch-ink);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .note-entry .note-delete {
+    flex: 0 0 auto;
+    background: transparent;
+    border: none;
+    color: var(--parch-ink-soft);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 6px;
+    position: relative;
+    z-index: 1;
+  }
+  .note-entry .note-delete:hover { color: var(--danger); }
+
+  /* Deck Statistics panel */
+  .stats-body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .stats-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .stats-row-label {
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .stats-bar {
+    display: flex;
+    width: 100%;
+    height: 10px;
+    border-radius: 5px;
+    overflow: hidden;
+    background: var(--bg);
+    border: 1px solid var(--border);
+  }
+  .stats-bar-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+  }
+  .stats-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .stats-legend span { display: flex; align-items: center; gap: 5px; }
+  .stats-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .stats-summary-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    font-size: 13.5px;
+    padding-top: 4px;
+    border-top: 1px dashed var(--border);
+  }
+  .stats-summary-row .has-problems { color: var(--danger); font-weight: 600; }
+
+  /* Saved filter presets */
+  .preset-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+  .preset-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .preset-empty {
+    font-size: 12px;
+    color: var(--muted);
+    font-style: italic;
+  }
+  .preset-pill {
+    display: flex;
+    align-items: center;
+    background: var(--bg);
+    border-radius: 999px;
+    padding-right: 2px;
+  }
+  .preset-chip { white-space: nowrap; }
+  .preset-delete {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+  .preset-delete:hover { color: var(--danger); }
+  .preset-save-row {
+    display: flex;
+    gap: 6px;
+  }
+  .preset-save-row input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12.5px;
+    color: var(--text);
+    background: var(--card-bg);
+  }
+
+  .item-input {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .item-input input[type="text"] {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  ul.item-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* Shared "entry" card used for quests, perils, and general missions */
+  .entry-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--entry-accent, var(--accent));
+    border-radius: 8px;
+    font-size: 13.5px;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.15s ease;
+  }
+  .entry-item:hover {
+    transform: translateX(2px);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.18);
+  }
+  .entry-item.done {
+    opacity: 0.6;
+    border-left-color: var(--border);
+  }
+  .entry-item .text { flex: 1; word-break: break-word; }
+  .entry-item.done .text { text-decoration: line-through; color: var(--muted); }
+  .problem-list .entry-item:not(.done) { background: var(--danger-soft); }
+  .problem-list .entry-item:not(.done) .text { color: var(--problem-text); }
+  .entry-item .text.editable, .note-entry .note-text.editable { cursor: text; }
+  .entry-item .text.editable:hover, .note-entry .note-text.editable:hover { text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; }
+  .entry-edit-input {
+    flex: 1;
+    font: inherit;
+    color: inherit;
+    background: var(--card-bg);
+    border: 1px solid var(--accent);
+    border-radius: 5px;
+    padding: 3px 6px;
+  }
+  .note-edit-input {
+    flex: 1;
+    font: inherit;
+    color: inherit;
+    background: var(--card-bg);
+    border: 1px solid var(--accent);
+    border-radius: 5px;
+    padding: 6px 8px;
+    resize: vertical;
+    min-height: 40px;
+  }
+
+  .entry-toggle {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--entry-accent, var(--accent));
+    background: transparent;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .entry-item.done .entry-toggle {
+    background: #00c875;
+    border-color: #00c875;
+  }
+  .entry-delete {
+    flex: 0 0 auto;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 6px;
+  }
+  .entry-delete:hover { color: var(--danger); }
+
+  .icon-btn {
+    background: transparent;
+    color: var(--danger);
+    border: none;
+    padding: 4px 8px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .icon-btn:hover { opacity: 0.7; }
+  .small-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+  input[type="file"] { font-size: 13px; }
+
+  /* Toast (undo) notifications */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    pointer-events: none;
+  }
+  .toast {
+    pointer-events: auto;
+    background: var(--card-bg);
+    border: 2px solid var(--gold);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    font-size: 13.5px;
+    color: var(--text);
+    animation: toastIn 0.2s ease;
+  }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pileCardIn {
+    from { opacity: 0; transform: scale(0.92) translateY(6px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .draw-fly-card {
+    position: fixed;
+    z-index: 900;
+    pointer-events: none;
+    background: linear-gradient(160deg, var(--gold), #a9772a);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.45);
+    opacity: 0.95;
+    transition: left 0.38s cubic-bezier(.25,.8,.3,1), top 0.38s cubic-bezier(.25,.8,.3,1), width 0.38s ease, height 0.38s ease, opacity 0.38s ease, transform 0.38s ease;
+  }
+  .toast-undo {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 12.5px;
+    font-weight: 700;
+    font-family: var(--font-display);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .toast-undo:hover { background: var(--accent-dark); }
+
+  /* ============================================================
+     NORMAL SKIN (default) — clean, flat cards.
+     The parchment / collectible-card-game look lives in the base
+     rules above and is shown only when data-skin="fantasy".
+     Here we override the decorative parts back to a plain look.
+     ============================================================ */
+  html[data-skin="normal"] {
+    --font-display: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    --bg: #eef0f4;
+    --card-bg: #ffffff;
+    --border: #dfe1e6;
+    --text: #172b4d;
+    --muted: #6b778c;
+    --gold: #5e6c84;
+    --gold-bright: #8993a4;
+    --row-hover: #f4f5f7;
+    --parch-1: #ffffff;
+    --parch-2: #f7f8fa;
+    --parch-ink: #172b4d;
+    --parch-ink-soft: #5e6c84;
+    --parch-edge: #dfe1e6;
+    --parch-rule-bg: #f4f5f7;
+    --parch-mottle-hi: transparent;
+    --parch-mottle-lo: transparent;
+    --roll-dark: transparent;
+    --roll-light: transparent;
+    --table-felt-1: #eef0f4;
+    --table-felt-2: #e4e7ec;
+  }
+  html[data-skin="normal"][data-theme="dark"] {
+    --bg: #1a1d24;
+    --card-bg: #22262e;
+    --border: #333a45;
+    --text: #e6e9ef;
+    --muted: #9aa4b2;
+    --gold: #aab3c0;
+    --gold-bright: #c4ccd6;
+    --row-hover: rgba(255,255,255,0.05);
+    --parch-1: #2a2f38;
+    --parch-2: #22262e;
+    --parch-ink: #e6e9ef;
+    --parch-ink-soft: #9aa4b2;
+    --parch-edge: #333a45;
+    --parch-rule-bg: #2a2f38;
+    --table-felt-1: #1a1d24;
+    --table-felt-2: #14161b;
+  }
+  /* Flat page background, no wood/embers/vignette */
+  html[data-skin="normal"] { background: var(--bg); }
+  html[data-skin="normal"] body {
+    background: var(--bg);
+  }
+  html[data-skin="normal"] body::before { display: none; }
+  html[data-skin="normal"] .ambient-embers { display: none; }
+  /* Plain title */
+  html[data-skin="normal"] h1 {
+    background: none;
+    -webkit-text-fill-color: currentColor;
+    color: var(--text);
+    animation: none;
+    filter: none;
+    font-weight: 700;
+  }
+  html[data-skin="normal"] h1::before,
+  html[data-skin="normal"] h1::after { display: none; }
+  html[data-skin="normal"] .header-divider { background: linear-gradient(90deg, transparent, var(--border) 50%, transparent); }
+  html[data-skin="normal"] .header-divider span { background: var(--muted); box-shadow: none; }
+  /* Hide all the decorative corner marks / inner frames */
+  html[data-skin="normal"] .frame-corner,
+  html[data-skin="normal"] .corner-mark,
+  html[data-skin="normal"] .card-corner,
+  html[data-skin="normal"] .toolbar::before,
+  html[data-skin="normal"] .modal-panel::after,
+  html[data-skin="normal"] .project-card::before,
+  html[data-skin="normal"] .quest-card::after { display: none; }
+  /* Panels: flat white cards with a subtle border */
+  html[data-skin="normal"] .toolbar,
+  html[data-skin="normal"] .missions-panel,
+  html[data-skin="normal"] .hand-strip,
+  html[data-skin="normal"] .footer-bar,
+  html[data-skin="normal"] .table-wrap,
+  html[data-skin="normal"] .discard-pile {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  html[data-skin="normal"] .missions-header,
+  html[data-skin="normal"] .hand-strip-header {
+    background: transparent;
+    background-image: none;
+  }
+  html[data-skin="normal"] .missions-header h2,
+  html[data-skin="normal"] .hand-strip-header h2,
+  html[data-skin="normal"] .toolbar-label,
+  html[data-skin="normal"] .section-box h4 { color: var(--text); }
+  html[data-skin="normal"] .section-box h4::after { content: ""; }
+  html[data-skin="normal"] table.projects-table th {
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+  }
+  /* Summary bar now sits on a light page */
+  html[data-skin="normal"] .summary-bar { color: var(--muted); text-shadow: none; }
+  /* Cards: flat with a category-colored top accent */
+  html[data-skin="normal"] .project-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--cat-color, var(--accent));
+    border-radius: 10px;
+    padding: 14px 16px 18px;
+    color: var(--text);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  html[data-skin="normal"] .project-card:hover {
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
+  }
+  html[data-skin="normal"] .project-card.tier-rare,
+  html[data-skin="normal"] .project-card.tier-epic,
+  html[data-skin="normal"] .project-card.tier-legendary {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  html[data-skin="normal"] .project-card.tier-legendary::after { display: none; }
+  /* Card title: plain heading, no ribbon */
+  html[data-skin="normal"] .card-header h3 {
+    background: none;
+    clip-path: none;
+    color: var(--text);
+    padding: 0;
+    font-size: 16px;
+    text-shadow: none;
+    max-width: 100%;
+  }
+  /* Art window: subtle inset panel */
+  html[data-skin="normal"] .card-art {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    box-shadow: none;
+  }
+  html[data-skin="normal"] .card-typeline { border-bottom: 1px solid var(--border); }
+  html[data-skin="normal"] .card-rules {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    font-style: normal;
+    font-family: inherit;
+    color: var(--muted);
+  }
+  html[data-skin="normal"] .card-stat-badge { border-color: var(--accent); }
+  /* Hand cards: flat */
+  html[data-skin="normal"] .hand-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--cat-color, var(--accent));
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  html[data-skin="normal"] .hand-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+  html[data-skin="normal"] .hand-card h4 { color: var(--text); }
+  /* Notes: flat */
+  html[data-skin="normal"] .note-entry {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    box-shadow: none;
+    color: var(--text);
+  }
+  html[data-skin="normal"] .note-entry::after { display: none; }
+  html[data-skin="normal"] .note-entry .note-text { color: var(--text); }
+  /* Modal: plain */
+  html[data-skin="normal"] .modal-panel { border: 1px solid var(--border); }
+  html[data-skin="normal"] .modal-header { border-bottom: 1px solid var(--border); }
+
+  /* Sync status pill (shared-data indicator) */
+  .sync-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--muted);
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--card-bg);
+    white-space: nowrap;
+  }
+  .sync-status .sync-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+  .sync-status.local   .sync-dot { background: #8993a4; }
+  .sync-status.synced  .sync-dot { background: #00c875; }
+  .sync-status.saving  .sync-dot { background: #fdab3d; }
+  .sync-status.connecting .sync-dot { background: #579bfc; }
+  .sync-status.error   .sync-dot { background: #c43a3a; }
+</style>
+<script>
+  // Set theme + skin before first paint to avoid a flash of the wrong look.
+  (function () {
+    try {
+      var raw = localStorage.getItem("projectTrackerStateV2");
+      var ui = raw ? (JSON.parse(raw).ui || {}) : {};
+      document.documentElement.setAttribute("data-theme", ui.theme === "dark" ? "dark" : "light");
+      document.documentElement.setAttribute("data-skin", ui.skin === "fantasy" ? "fantasy" : "normal");
+    } catch (e) {
+      document.documentElement.setAttribute("data-theme", "light");
+      document.documentElement.setAttribute("data-skin", "normal");
+    }
+  })();
+</script>
+</head>
+<body>
+
+<div class="ambient-embers" aria-hidden="true">
+  <span style="left:4%; width:4px; height:4px; animation-duration:16s; animation-delay:0s;"></span>
+  <span style="left:12%; width:3px; height:3px; animation-duration:13s; animation-delay:2s;"></span>
+  <span style="left:22%; width:5px; height:5px; animation-duration:19s; animation-delay:4s;"></span>
+  <span style="left:34%; width:3px; height:3px; animation-duration:15s; animation-delay:1s;"></span>
+  <span style="left:47%; width:4px; height:4px; animation-duration:17s; animation-delay:6s;"></span>
+  <span style="left:58%; width:3px; height:3px; animation-duration:14s; animation-delay:3s;"></span>
+  <span style="left:69%; width:5px; height:5px; animation-duration:20s; animation-delay:5s;"></span>
+  <span style="left:78%; width:3px; height:3px; animation-duration:12s; animation-delay:7s;"></span>
+  <span style="left:88%; width:4px; height:4px; animation-duration:18s; animation-delay:2.5s;"></span>
+  <span style="left:95%; width:3px; height:3px; animation-duration:15s; animation-delay:8s;"></span>
+</div>
+
+<div class="page">
+  <h1>Project Tracker</h1>
+  <div class="header-divider"><span></span></div>
+
+  <div class="layout">
+    <div class="toolbar">
+      <span class="frame-corner tl"></span>
+      <span class="frame-corner tr"></span>
+      <span class="frame-corner bl"></span>
+      <span class="frame-corner br"></span>
+
+      <div class="toolbar-scroll">
+        <div class="toolbar-row">
+          <input type="text" id="searchInput" class="search-input" placeholder="Search projects..." dir="auto">
+          <select class="status-filter" id="sortSelect"></select>
+        </div>
+
+        <div class="toolbar-row">
+          <span class="toolbar-label">🎴 Kind</span>
+          <div class="chip-group" id="categoryChips"></div>
+        </div>
+
+        <div class="toolbar-row">
+          <span class="toolbar-label">📈 Status</span>
+          <div class="chip-group" id="statusChips"></div>
+        </div>
+
+        <div class="toolbar-row">
+          <span class="toolbar-label">⚔️ Quests</span>
+          <div class="chip-group" id="todoChips"></div>
+        </div>
+
+        <div class="toolbar-row">
+          <span class="toolbar-label">🃏 Pile</span>
+          <div class="chip-group" id="pileChips"></div>
+        </div>
+
+        <div class="toolbar-row toolbar-row-last">
+          <span class="toolbar-label">🔖 Presets</span>
+          <div class="preset-row">
+            <div class="preset-list" id="presetList"></div>
+            <div class="preset-save-row">
+              <input type="text" id="presetNameInput" placeholder="Preset name..." dir="auto">
+              <button class="btn secondary small-btn" id="presetSaveBtn">+ Save current</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <main class="main-column">
+      <div class="add-bar" id="addBar">
+        <input type="text" id="addNameInput" placeholder="Project name..." dir="auto">
+        <select id="addCategorySelect"></select>
+        <button class="btn small-btn" id="addConfirmBtn">Add</button>
+        <button class="btn secondary small-btn" id="addCancelBtn">Cancel</button>
+      </div>
+
+      <div class="summary-bar" id="summaryBar"></div>
+
+      <div class="missions-panel" id="missionsPanel"></div>
+
+      <div class="missions-panel" id="notesPanel"></div>
+
+      <div class="missions-panel" id="statsPanel"></div>
+
+      <div class="view-controls-row" id="viewControlsRow">
+        <button class="btn" id="addProjectBtn">+ Add Project</button>
+        <div class="segmented" id="viewToggle">
+          <button data-view="cards" class="active">▦ Cards</button>
+          <button data-view="table">☰ Table</button>
+        </div>
+      </div>
+
+      <div id="content"></div>
+
+      <div class="discard-pile" id="discardPile"></div>
+
+      <div class="footer-bar" id="footerBar">
+        <span class="frame-corner tl"></span>
+        <span class="frame-corner tr"></span>
+        <span class="frame-corner bl"></span>
+        <span class="frame-corner br"></span>
+        <button class="btn secondary" id="exportBtn" title="Export backup (.json)">⬇️ Export Backup</button>
+        <button class="btn secondary" id="importBtn" title="Import backup (.json)">⬆️ Import Backup</button>
+        <input type="file" id="importFileInput" accept="application/json,.json" style="display:none">
+        <button class="btn secondary" id="themeToggleBtn" title="Toggle dark mode">🌙 Dark Mode</button>
+        <button class="btn secondary" id="skinToggleBtn" title="Toggle card style">🎴 Fantasy Cards</button>
+        <span class="sync-status local" id="syncStatus" title="Where your data is stored">
+          <span class="sync-dot"></span><span id="syncStatusText">Local only</span>
+        </span>
+      </div>
+    </main>
+
+    <div class="hand-strip" id="handStrip"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="detailOverlay">
+  <div class="modal-panel" id="detailPanel">
+    <span class="frame-corner tl"></span>
+    <span class="frame-corner tr"></span>
+    <span class="frame-corner bl"></span>
+    <span class="frame-corner br"></span>
+    <div class="modal-scroll">
+      <div class="modal-header">
+        <span class="modal-cat-icon" id="detailCatIcon"></span>
+        <input type="text" id="detailTitle" class="title-input">
+
+        <button class="modal-delete-btn" id="detailDeleteBtn">🗑️ Trash Card</button>
+        <button class="modal-close" id="detailCloseBtn">&times;</button>
+      </div>
+      <div class="modal-tier-ribbon" id="detailTierRibbon"></div>
+      <div class="modal-body" id="detailBody"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+const STAGES = [
+  { name: "Before Set Up", color: "#c4c4c4" },
+  { name: "Initialised", color: "#579bfc" },
+  { name: "Cycles", color: "#fdab3d" },
+  { name: "Sent to Yazam", color: "#a25ddc" },
+  { name: "At Service", color: "#00c875" }
+];
+const GLOW_BLUR = [0, 6, 10, 15, 22];
+const GLOW_ALPHA = ["00", "40", "50", "60", "80"];
+function glowVars(statusIndex) {
+  return {
+    blur: GLOW_BLUR[statusIndex] + "px",
+    color: STAGES[statusIndex].color + GLOW_ALPHA[statusIndex]
+  };
+}
+const CATEGORIES = ["Dolley", "XY", "Pinch"];
+const HAND_LIMIT = 10;
+const PILE_OPTIONS = [
+  { value: "deck", label: "\u{1F0CF} Deck" },
+  { value: "hand", label: "\u{1F590}\u{FE0F} Hand" },
+  { value: "discard", label: "\u{1F5D1}\u{FE0F} Discard" }
+];
+const CATEGORY_META = {
+  Dolley: "#0073ea",
+  XY: "#e2445c",
+  Pinch: "#7e3ff2"
+};
+const CATEGORY_ICON = {
+  Dolley: "\u{1F537}",
+  XY: "\u{1F538}",
+  Pinch: "\u{1F52E}"
+};
+// Custom SVG icons: Dolley = red trolley with side rungs; XY = machine bed with edge knobs.
+const CATEGORY_ICON_HTML = {
+  Dolley:
+    '<svg class="cat-icon" viewBox="0 0 20 20" aria-hidden="true">' +
+    '<rect x="2" y="3" width="16" height="2.1" rx="0.6" fill="#141414"/>' +
+    '<rect x="2" y="6.6" width="16" height="2.1" rx="0.6" fill="#141414"/>' +
+    '<rect x="2" y="11" width="16" height="1.6" rx="0.5" fill="#141414"/>' +
+    '<rect x="2" y="13.8" width="16" height="1.6" rx="0.5" fill="#141414"/>' +
+    '<rect x="2" y="16.6" width="16" height="1.6" rx="0.5" fill="#141414"/>' +
+    '<rect x="6.6" y="1" width="6.8" height="18" rx="2.6" fill="#b11331" stroke="#6d0e20" stroke-width="0.9"/>' +
+    '<rect x="4.8" y="8.6" width="1.9" height="3.4" rx="0.5" fill="#1e7c3c"/>' +
+    '<circle cx="7.7" cy="4.7" r="1.8" fill="#ffffff" stroke="#333333" stroke-width="0.6"/>' +
+    '</svg>',
+  XY:
+    '<svg class="cat-icon" viewBox="0 0 20 20" aria-hidden="true">' +
+    '<rect x="2.6" y="2.6" width="14.8" height="14.8" rx="1.8" fill="#ddd8cb" stroke="#23a844" stroke-width="1.5"/>' +
+    '<ellipse cx="10" cy="3.1" rx="2.5" ry="1.55" fill="#0e6e2e" stroke="#0a4d20" stroke-width="0.5"/>' +
+    '<ellipse cx="10" cy="16.9" rx="2.5" ry="1.55" fill="#0e6e2e" stroke="#0a4d20" stroke-width="0.5"/>' +
+    '<ellipse cx="3.1" cy="10" rx="1.55" ry="2.5" fill="#0e6e2e" stroke="#0a4d20" stroke-width="0.5"/>' +
+    '<ellipse cx="16.9" cy="10" rx="1.55" ry="2.5" fill="#0e6e2e" stroke="#0a4d20" stroke-width="0.5"/>' +
+    '</svg>',
+  Pinch: '<span class="cat-icon-emoji">\u{1F52E}</span>'
+};
+function categoryIconHTML(category) {
+  return CATEGORY_ICON_HTML[category] || "";
+}
+const STORAGE_KEY = "projectTrackerStateV2";
+
+/* ============================================================
+   SHARED DATA (optional backend)
+   ------------------------------------------------------------
+   Leave these blank and the app works exactly as before, saving
+   to this browser only (localStorage).
+
+   Fill them in with your free Supabase project's values and the
+   app will store projects / missions / notes in the cloud, so
+   EVERY user who opens the app sees and edits the SAME data,
+   with live updates. See README.md + supabase-schema.sql for the
+   ~5 minute setup.
+
+   Only the shared data is synced. Your personal view (filters,
+   search, sort, theme, card style) stays local to your browser.
+   ============================================================ */
+const SUPABASE_URL = "";        // e.g. "https://abcdefgh.supabase.co"
+const SUPABASE_ANON_KEY = "";   // your project's public "anon" key
+const SHARED_ROW_ID = "main";   // the shared workspace id (leave as-is)
+
+const DEFAULT_PROJECT_NAMES = {
+  Dolley: [
+    "הנביאים 73", "מכבי 1-3", "בלוך 14", "הדגנים 18", "רנ\"ק 12", "הרא\"ה 196",
+    "הרב לוין 6", "עין חי 7", "טרומפלדור 33", "הרצל 35", "יסוד המעלה 11",
+    "נמל תל אביב", "הזוהר 5", "הלפר 15", "פינסקר 38", "אביגיל 20", "אנילביץ 11",
+    "אפשטיין 5", "מנחם בגין 3", "הגפן 8", "דיזינגוף 135", "יוחנן הורקנוס 3",
+    "הירקון 180", "מנדלשטם 8", "שדרות ירושלים 8", "זבוטינסקי 91", "יעל 6",
+    "שדרות בן צבי 25"
+  ],
+  XY: [
+    "הראשונים 22", "אריה לייב יפה 49", "המלך ג'ורג' 39", "שדרות רוטשילד 134",
+    "אלחנן יצחק 12", "רבי עקיבא אייגר 2", "רופין 3", "אוסישקין 58", "ברנדיס 38",
+    "יבנה 44", "הקונגרס 29", "יונתן הופסי 6", "אנטוקולסקי 8", "חולדה 4",
+    "מטלון 49", "רופין 20", "מרכז בעלי מלאכה 8", "מגדל 1", "רמבם 36"
+  ],
+  Pinch: [
+    "שינקין 50", "הירדן 12", "שפינוזה 14", "שדרות נורדאו 65", "הרב הרצוג 17",
+    "אחווה 24", "מסריק 1", "עמינדב 2", "שרירא שמואל 34-42 A", "שרירא שמואל 34-42 B",
+    "הירקון 224", "גונן 10-16", "הרצל 91", "דה האז 3", "בלוך 22", "הירקון 72",
+    "זלטופולסקי 17", "ויצמן 93", "סוקולוב 10", "אחד העם 108"
+  ]
+};
+
+function buildDefaultProjects() {
+  const projects = [];
+  CATEGORIES.forEach(cat => {
+    (DEFAULT_PROJECT_NAMES[cat] || []).forEach(name => {
+      projects.push(newProject(name, cat));
+    });
+  });
+  return projects;
+}
+
+function mergeMissingDefaults(projects) {
+  const existingKeys = new Set(projects.map(p => p.category + "::" + p.name.trim()));
+  CATEGORIES.forEach(cat => {
+    (DEFAULT_PROJECT_NAMES[cat] || []).forEach(name => {
+      const key = cat + "::" + name.trim();
+      if (!existingKeys.has(key)) {
+        projects.push(newProject(name, cat));
+        existingKeys.add(key);
+      }
+    });
+  });
+  return projects;
+}
+
+function migrateState(parsed) {
+  if (!Array.isArray(parsed.projects)) parsed.projects = [];
+  parsed.projects.forEach(p => {
+    if (!p.pile) p.pile = "deck";
+
+    // Notes: legacy single string -> array of { text }
+    if (typeof p.notes === "string") {
+      p.notes = p.notes.trim() ? [{ text: p.notes }] : [];
+    } else if (!Array.isArray(p.notes)) {
+      p.notes = [];
+    }
+
+    // Quests (stored as `todos`): ensure new fields (description + sub-missions)
+    if (!Array.isArray(p.todos)) p.todos = [];
+    p.todos.forEach(t => {
+      if (typeof t.description !== "string") t.description = "";
+      if (!Array.isArray(t.subs)) t.subs = [];
+    });
+
+    // Perils removed: fold any existing perils into notes, then drop the field.
+    if (Array.isArray(p.problems)) {
+      p.problems.forEach(pr => {
+        const txt = (pr && typeof pr.text === "string") ? pr.text.trim() : "";
+        if (txt) p.notes.push({ text: "⚠ " + txt });
+      });
+      delete p.problems;
+    }
+  });
+  if (!Array.isArray(parsed.globalMissions)) parsed.globalMissions = [];
+  if (!parsed.ui) parsed.ui = {};
+  if (!parsed.ui.view) parsed.ui.view = "cards";
+
+  if (!Array.isArray(parsed.ui.categoryFilters)) {
+    parsed.ui.categoryFilters = (parsed.ui.categoryFilter && parsed.ui.categoryFilter !== "All")
+      ? [parsed.ui.categoryFilter] : [...CATEGORIES];
+  }
+  delete parsed.ui.categoryFilter;
+
+  if (!Array.isArray(parsed.ui.statusFilters)) {
+    parsed.ui.statusFilters = (parsed.ui.statusFilter !== undefined && parsed.ui.statusFilter !== -1)
+      ? [parsed.ui.statusFilter] : STAGES.map((s, i) => i);
+  }
+  delete parsed.ui.statusFilter;
+
+  if (!Array.isArray(parsed.ui.todoFilters)) {
+    parsed.ui.todoFilters = (parsed.ui.todoFilter && parsed.ui.todoFilter !== "all")
+      ? [parsed.ui.todoFilter] : ["hasOpen", "none"];
+  }
+  delete parsed.ui.todoFilter;
+
+  // Perils removed — drop any legacy peril filter state.
+  delete parsed.ui.problemFilter;
+  delete parsed.ui.problemFilters;
+  if (parsed.ui.sortBy === "problems-desc") parsed.ui.sortBy = "default";
+
+  if (!Array.isArray(parsed.ui.pileFilters)) parsed.ui.pileFilters = ["deck"];
+  if (!parsed.ui.sortBy) parsed.ui.sortBy = "default";
+  if (parsed.ui.searchQuery === undefined) parsed.ui.searchQuery = "";
+  if (!parsed.ui.theme) parsed.ui.theme = "light";
+  if (!parsed.ui.skin) parsed.ui.skin = "normal";
+  if (parsed.ui.missionsCollapsed === undefined) parsed.ui.missionsCollapsed = false;
+  if (parsed.ui.discardCollapsed === undefined) parsed.ui.discardCollapsed = true;
+  if (parsed.ui.notesCollapsed === undefined) parsed.ui.notesCollapsed = false;
+  if (parsed.ui.statsCollapsed === undefined) parsed.ui.statsCollapsed = true;
+  if (!Array.isArray(parsed.filterPresets)) parsed.filterPresets = [];
+  if (typeof parsed.generalNotes === "string") {
+    parsed.generalNotes = parsed.generalNotes.trim() ? [{ text: parsed.generalNotes }] : [];
+  } else if (!Array.isArray(parsed.generalNotes)) {
+    parsed.generalNotes = [];
+  }
+  if (!parsed.seedMerged) {
+    parsed.projects = mergeMissingDefaults(parsed.projects);
+    parsed.seedMerged = true;
+  }
+  return parsed;
+}
+
+function loadState() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+
+  if (raw) {
+    // Real saved data exists. If anything below fails, we must NOT fall
+    // through to the fresh-seed path — that would overwrite real data.
+    try {
+      const parsed = migrateState(JSON.parse(raw));
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+      } catch (saveErr) {
+        console.error("Failed to persist migrated state (storage may be full):", saveErr);
+      }
+      return parsed;
+    } catch (e) {
+      console.error("Your saved data exists but could not be loaded/migrated. It has NOT been erased.", e);
+      alert("Your saved project data could not be loaded due to an unexpected error, but it has NOT been deleted. Please tell the developer about this before doing anything else (do not clear browser data).");
+      // Bail out without touching localStorage — surface an empty, in-memory-only
+      // state so the page still renders instead of crashing, but never persist it.
+      return {
+        projects: [],
+        globalMissions: [],
+        generalNotes: [],
+        filterPresets: [],
+        seedMerged: true,
+        ui: {
+          view: "cards",
+          categoryFilters: [...CATEGORIES],
+          statusFilters: STAGES.map((s, i) => i),
+          todoFilters: ["hasOpen", "none"],
+          pileFilters: ["deck"],
+          sortBy: "default",
+          searchQuery: "",
+          theme: "light",
+          skin: "normal",
+          missionsCollapsed: false,
+          discardCollapsed: true,
+          notesCollapsed: false,
+          statsCollapsed: true
+        }
+      };
+    }
+  }
+
+  // No saved data at all yet — safe to seed fresh defaults.
+  const seeded = {
+    projects: buildDefaultProjects(),
+    globalMissions: [],
+    generalNotes: [],
+    filterPresets: [],
+    seedMerged: true,
+    ui: {
+      view: "cards",
+      categoryFilters: [...CATEGORIES],
+      statusFilters: STAGES.map((s, i) => i),
+      todoFilters: ["hasOpen", "none"],
+      pileFilters: ["deck"],
+      sortBy: "default",
+      searchQuery: "",
+      theme: "light",
+      skin: "normal",
+      missionsCollapsed: false,
+      discardCollapsed: true,
+      notesCollapsed: false,
+      statsCollapsed: true
+    }
+  };
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
+  } catch (e) {
+    console.error("Failed to persist seed data:", e);
+  }
+  return seeded;
+}
+
+let state = loadState();
+let openDetailId = null;
+const REDUCED_MOTION = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const RTL_PATTERN = new RegExp(
+  "[" + String.fromCharCode(0x0590) + "-" + String.fromCharCode(0x05FF) +
+  String.fromCharCode(0x0600) + "-" + String.fromCharCode(0x06FF) + "]"
+);
+function applyBidi(el, text) {
+  const isRtl = RTL_PATTERN.test(text || "");
+  el.dir = isRtl ? "rtl" : "ltr";
+  el.style.textAlign = isRtl ? "right" : "left";
+}
+
+function applyTheme() {
+  document.documentElement.setAttribute("data-theme", state.ui.theme);
+  const btn = document.getElementById("themeToggleBtn");
+  if (btn) btn.textContent = state.ui.theme === "dark" ? "☀️ Light Mode" : "🌙 Dark Mode";
+}
+function applySkin() {
+  document.documentElement.setAttribute("data-skin", state.ui.skin);
+  const btn = document.getElementById("skinToggleBtn");
+  if (btn) btn.textContent = state.ui.skin === "fantasy" ? "📇 Normal Cards" : "🎴 Fantasy Cards";
+}
+applyTheme();
+applySkin();
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    // Likely quota exceeded (base64 images can be large in localStorage).
+    console.error("Failed to save state (storage may be full):", e);
+    alert("Could not save changes — browser storage may be full (this can happen with large images).");
+  }
+  // Push the shared data to the cloud (no-op unless a backend is configured).
+  schedulePush();
+}
+
+/* ============================================================
+   Shared-data backend (Supabase). No-op until SUPABASE_URL /
+   SUPABASE_ANON_KEY are filled in above. Only the shared fields
+   (projects, missions, general notes) are synced — each user's
+   filters/search/theme/card style stay local.
+   ============================================================ */
+const CLIENT_ID = Math.random().toString(36).slice(2) + Date.now().toString(36);
+let supabaseClient = null;
+let backendReady = false;
+let applyingRemote = false;   // guards against re-pushing data we just received
+let pushTimer = null;
+
+function backendEnabled() { return !!(SUPABASE_URL && SUPABASE_ANON_KEY); }
+
+function setSyncStatus(kind, text) {
+  const el = document.getElementById("syncStatus");
+  if (!el) return;
+  el.className = "sync-status " + kind;
+  const t = document.getElementById("syncStatusText");
+  if (t) t.textContent = text;
+}
+
+function sharedSnapshot() {
+  return {
+    projects: state.projects,
+    globalMissions: state.globalMissions,
+    generalNotes: state.generalNotes,
+    seedMerged: state.seedMerged
+  };
+}
+
+function applySharedData(remote) {
+  if (!remote || typeof remote !== "object") return;
+  applyingRemote = true;
+  if (Array.isArray(remote.projects)) state.projects = remote.projects;
+  if (Array.isArray(remote.globalMissions)) state.globalMissions = remote.globalMissions;
+  if (Array.isArray(remote.generalNotes)) state.generalNotes = remote.generalNotes;
+  if (typeof remote.seedMerged === "boolean") state.seedMerged = remote.seedMerged;
+  // Normalize shape (adds any missing fields on incoming records).
+  state = migrateState(state);
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  applyingRemote = false;
+}
+
+function rerenderAllData() {
+  renderMissionsPanel();
+  renderNotesPanel();
+  renderAll();
+  if (openDetailId) {
+    if (state.projects.find(p => p.id === openDetailId)) renderDetail();
+    else closeDetail();
+  }
+}
+
+function loadSupabaseLib() {
+  return new Promise((resolve, reject) => {
+    if (window.supabase && window.supabase.createClient) return resolve();
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+    s.onload = resolve;
+    s.onerror = () => reject(new Error("Could not load the Supabase library (offline?)."));
+    document.head.appendChild(s);
+  });
+}
+
+async function pushNow() {
+  if (!backendReady || !supabaseClient || applyingRemote) return;
+  setSyncStatus("saving", "Saving…");
+  const { error } = await supabaseClient.from("app_state").upsert({
+    id: SHARED_ROW_ID,
+    data: sharedSnapshot(),
+    updated_by: CLIENT_ID,
+    updated_at: new Date().toISOString()
+  });
+  if (error) {
+    console.error("Sync push failed:", error);
+    setSyncStatus("error", "Sync error");
+  } else {
+    setSyncStatus("synced", "Shared · synced");
+  }
+}
+
+function schedulePush() {
+  if (!backendReady || applyingRemote) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(pushNow, 600);
+}
+
+async function initBackend() {
+  if (!backendEnabled()) {
+    setSyncStatus("local", "Local only");
+    return;
+  }
+  setSyncStatus("connecting", "Connecting…");
+  try {
+    await loadSupabaseLib();
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Pull the shared workspace (if it exists yet).
+    const { data, error } = await supabaseClient
+      .from("app_state").select("data").eq("id", SHARED_ROW_ID).maybeSingle();
+    if (error) throw error;
+
+    backendReady = true;
+
+    if (data && data.data) {
+      applySharedData(data.data);
+      rerenderAllData();
+    } else {
+      // First run: seed the shared workspace with what we have locally.
+      await pushNow();
+    }
+    setSyncStatus("synced", "Shared · synced");
+
+    // Live updates from other users.
+    supabaseClient
+      .channel("app_state_" + SHARED_ROW_ID)
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "app_state", filter: "id=eq." + SHARED_ROW_ID },
+        payload => {
+          const row = payload.new;
+          if (!row || !row.data || row.updated_by === CLIENT_ID) return;
+          applySharedData(row.data);
+          rerenderAllData();
+          setSyncStatus("synced", "Shared · synced");
+        })
+      .subscribe();
+  } catch (e) {
+    console.error("Backend init failed:", e);
+    backendReady = false;
+    setSyncStatus("error", "Sync error — using local");
+  }
+}
+
+function newProject(name, category) {
+  return {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    name,
+    category,
+    statusIndex: 0,
+    mapImage: null,
+    notes: [],
+    todos: [],
+    pile: "deck"
+  };
+}
+
+function passesMultiFilter(selected, totalCount, matchFn) {
+  if (selected.length === totalCount) return true;
+  if (selected.length === 0) return false;
+  return matchFn();
+}
+
+function isAllCategories() { return state.ui.categoryFilters.length === CATEGORIES.length; }
+
+function getFilteredProjects() {
+  const { categoryFilters, statusFilters, todoFilters, pileFilters, sortBy, searchQuery } = state.ui;
+  const query = (searchQuery || "").trim().toLowerCase();
+  let result = state.projects.filter(p => {
+    const openTodos = p.todos.filter(t => !t.done).length;
+    if (!passesMultiFilter(categoryFilters, CATEGORIES.length, () => categoryFilters.includes(p.category))) return false;
+    if (!passesMultiFilter(statusFilters, STAGES.length, () => statusFilters.includes(p.statusIndex))) return false;
+    if (!passesMultiFilter(pileFilters, PILE_OPTIONS.length, () => pileFilters.includes(p.pile))) return false;
+    if (!passesMultiFilter(todoFilters, 2, () => {
+      return (todoFilters.includes("hasOpen") && openTodos > 0) ||
+             (todoFilters.includes("none") && p.todos.length === 0);
+    })) return false;
+    if (query) {
+      const inName = p.name.toLowerCase().includes(query);
+      const inNotes = p.notes.some(n => n.text.toLowerCase().includes(query));
+      const inQuests = p.todos.some(t =>
+        t.text.toLowerCase().includes(query) ||
+        (t.description || "").toLowerCase().includes(query) ||
+        (t.subs || []).some(s => s.text.toLowerCase().includes(query))
+      );
+      if (!inName && !inNotes && !inQuests) return false;
+    }
+    return true;
+  });
+
+  const collator = new Intl.Collator();
+  switch (sortBy) {
+    case "name-asc":
+      result.sort((a, b) => collator.compare(a.name, b.name));
+      break;
+    case "name-desc":
+      result.sort((a, b) => collator.compare(b.name, a.name));
+      break;
+    case "status-asc":
+      result.sort((a, b) => a.statusIndex - b.statusIndex);
+      break;
+    case "status-desc":
+      result.sort((a, b) => b.statusIndex - a.statusIndex);
+      break;
+    case "todos-desc":
+      result.sort((a, b) => (b.todos.filter(t => !t.done).length) - (a.todos.filter(t => !t.done).length));
+      break;
+    default:
+      if (categoryFilters.length !== 1) {
+        result.sort((a, b) => collator.compare(a.name, b.name));
+      }
+      break;
+  }
+  return result;
+}
+
+/* ---------- Toolbar ---------- */
+
+function toggleInArray(arr, val) {
+  const idx = arr.indexOf(val);
+  if (idx === -1) arr.push(val); else arr.splice(idx, 1);
+}
+
+function renderMultiChipGroup(cfg) {
+  const { containerId, options, getSelected, onToggle, onAll } = cfg;
+  const group = document.getElementById(containerId);
+  group.innerHTML = "";
+
+  const selected = getSelected();
+  const isAllActive = selected.length === options.length;
+
+  const allChip = document.createElement("button");
+  allChip.className = "chip" + (isAllActive ? " active" : "");
+  allChip.textContent = "All";
+  if (isAllActive) allChip.style.background = "#323338";
+  allChip.addEventListener("click", () => {
+    onAll();
+    saveState();
+    renderToolbar();
+    renderContent();
+  });
+  group.appendChild(allChip);
+
+  options.forEach(opt => {
+    const active = selected.includes(opt.value);
+    const chip = document.createElement("button");
+    chip.className = "chip" + (active ? " active" : "");
+    if (opt.html) {
+      chip.innerHTML = opt.html;
+    } else {
+      chip.textContent = opt.label;
+    }
+    if (active) chip.style.background = opt.color || "#323338";
+    chip.addEventListener("click", () => {
+      onToggle(opt.value);
+      saveState();
+      renderToolbar();
+      renderContent();
+    });
+    group.appendChild(chip);
+  });
+}
+
+function renderToolbar() {
+  const searchInput = document.getElementById("searchInput");
+  if (document.activeElement !== searchInput) {
+    searchInput.value = state.ui.searchQuery;
+  }
+  searchInput.oninput = () => {
+    state.ui.searchQuery = searchInput.value;
+    saveState();
+    renderContent();
+  };
+
+  const themeToggleBtn = document.getElementById("themeToggleBtn");
+  themeToggleBtn.textContent = state.ui.theme === "dark" ? "☀️ Light Mode" : "🌙 Dark Mode";
+  themeToggleBtn.onclick = () => {
+    state.ui.theme = state.ui.theme === "dark" ? "light" : "dark";
+    saveState();
+    applyTheme();
+  };
+
+  const skinToggleBtn = document.getElementById("skinToggleBtn");
+  skinToggleBtn.textContent = state.ui.skin === "fantasy" ? "📇 Normal Cards" : "🎴 Fantasy Cards";
+  skinToggleBtn.onclick = () => {
+    state.ui.skin = state.ui.skin === "fantasy" ? "normal" : "fantasy";
+    saveState();
+    applySkin();
+  };
+
+  renderMultiChipGroup({
+    containerId: "categoryChips",
+    options: CATEGORIES.map(cat => ({ value: cat, label: cat, html: categoryIconHTML(cat) + " " + cat, color: CATEGORY_META[cat] })),
+    getSelected: () => state.ui.categoryFilters,
+    onToggle: (val) => toggleInArray(state.ui.categoryFilters, val),
+    onAll: () => { state.ui.categoryFilters = CATEGORIES.slice(); }
+  });
+
+  renderMultiChipGroup({
+    containerId: "statusChips",
+    options: STAGES.map((stage, i) => ({ value: i, label: RANK_GLYPHS[i] + " " + stage.name, color: stage.color })),
+    getSelected: () => state.ui.statusFilters,
+    onToggle: (val) => toggleInArray(state.ui.statusFilters, val),
+    onAll: () => { state.ui.statusFilters = STAGES.map((s, i) => i); }
+  });
+
+  renderMultiChipGroup({
+    containerId: "todoChips",
+    options: [
+      { value: "hasOpen", label: "Has open quests" },
+      { value: "none", label: "No quests" }
+    ],
+    getSelected: () => state.ui.todoFilters,
+    onToggle: (val) => toggleInArray(state.ui.todoFilters, val),
+    onAll: () => { state.ui.todoFilters = ["hasOpen", "none"]; }
+  });
+
+  renderMultiChipGroup({
+    containerId: "pileChips",
+    options: PILE_OPTIONS,
+    getSelected: () => state.ui.pileFilters,
+    onToggle: (val) => toggleInArray(state.ui.pileFilters, val),
+    onAll: () => { state.ui.pileFilters = PILE_OPTIONS.map(o => o.value); }
+  });
+
+  const sortSelect = document.getElementById("sortSelect");
+  sortSelect.innerHTML = `
+    <option value="default">Sort: Default</option>
+    <option value="name-asc">Name (A-Z)</option>
+    <option value="name-desc">Name (Z-A)</option>
+    <option value="status-asc">Status (early first)</option>
+    <option value="status-desc">Status (late first)</option>
+    <option value="todos-desc">Most open quests first</option>
+  `;
+  sortSelect.value = state.ui.sortBy;
+  sortSelect.onchange = () => {
+    state.ui.sortBy = sortSelect.value;
+    saveState();
+    renderContent();
+  };
+
+  document.querySelectorAll("#viewToggle button").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.view === state.ui.view);
+    btn.onclick = () => {
+      state.ui.view = btn.dataset.view;
+      saveState();
+      renderToolbar();
+      renderContent();
+    };
+  });
+
+  renderPresetsList();
+}
+
+/* ---------- Add bar ---------- */
+
+const addBar = document.getElementById("addBar");
+const addNameInput = document.getElementById("addNameInput");
+const addCategorySelect = document.getElementById("addCategorySelect");
+
+CATEGORIES.forEach(cat => {
+  const opt = document.createElement("option");
+  opt.value = cat;
+  opt.textContent = cat;
+  addCategorySelect.appendChild(opt);
+});
+
+function openAddBar() {
+  addBar.classList.add("visible");
+  addNameInput.value = "";
+  addNameInput.focus();
+}
+document.getElementById("addProjectBtn").addEventListener("click", openAddBar);
+document.getElementById("addCancelBtn").addEventListener("click", () => {
+  addBar.classList.remove("visible");
+});
+function resetFilters() {
+  state.ui.categoryFilters = CATEGORIES.slice();
+  state.ui.statusFilters = STAGES.map((s, i) => i);
+  state.ui.todoFilters = ["hasOpen", "none"];
+  state.ui.pileFilters = ["deck"];
+  state.ui.searchQuery = "";
+  state.ui.sortBy = "default";
+  saveState();
+  renderToolbar();
+  renderContent();
+}
+function confirmAdd() {
+  const name = addNameInput.value.trim();
+  if (!name) return;
+  const proj = newProject(name, addCategorySelect.value);
+  state.projects.push(proj);
+  saveState();
+  addBar.classList.remove("visible");
+  renderAll();
+  openDetail(proj.id);
+}
+document.getElementById("addConfirmBtn").addEventListener("click", confirmAdd);
+addNameInput.addEventListener("keydown", e => { if (e.key === "Enter") confirmAdd(); });
+
+/* ---------- Content (cards / table) ---------- */
+
+function renderSummary() {
+  const bar = document.getElementById("summaryBar");
+  const total = state.projects.length;
+  const parts = [`<strong>${total}</strong> project${total === 1 ? "" : "s"}`];
+  CATEGORIES.forEach(cat => {
+    const count = state.projects.filter(p => p.category === cat).length;
+    if (count > 0) {
+      parts.push(`<span><span class="summary-dot" style="background:${CATEGORY_META[cat]}"></span>${cat} ${count}</span>`);
+    }
+  });
+  const handCount = state.projects.filter(p => p.pile === "hand").length;
+  if (handCount > 0) {
+    parts.push(`<span>\u{1F590}\u{FE0F} ${handCount} in hand</span>`);
+  }
+  bar.innerHTML = parts.map(p => `<span>${p}</span>`).join("");
+}
+
+function renderAll() {
+  renderHandStrip();
+  renderDiscardPile();
+  renderStatsPanel();
+  renderContent();
+}
+
+function setPile(proj, pile, sourceEl) {
+  if (pile === "hand") {
+    const handCount = state.projects.filter(p => p.pile === "hand" && p.id !== proj.id).length;
+    if (handCount >= HAND_LIMIT) {
+      alert(`Your hand is full (${HAND_LIMIT}/${HAND_LIMIT}). Return or discard a card from your hand first.`);
+      return;
+    }
+  }
+  const isDrawing = pile === "hand" && proj.pile !== "hand";
+  const startRect = (isDrawing && sourceEl) ? sourceEl.getBoundingClientRect() : null;
+  proj.pile = pile;
+  saveState();
+  renderAll();
+  if (openDetailId === proj.id) renderDetail();
+  if (startRect) animateDrawToHand(startRect, proj.id);
+}
+
+function animateDrawToHand(startRect, projId) {
+  requestAnimationFrame(() => {
+    const target = document.querySelector('.hand-card[data-id="' + projId + '"]');
+    if (!target) return;
+    const endRect = target.getBoundingClientRect();
+    const clone = document.createElement("div");
+    clone.className = "draw-fly-card";
+    clone.textContent = "\u{1F0CF}";
+    clone.style.left = startRect.left + "px";
+    clone.style.top = startRect.top + "px";
+    clone.style.width = startRect.width + "px";
+    clone.style.height = startRect.height + "px";
+    document.body.appendChild(clone);
+    requestAnimationFrame(() => {
+      clone.style.left = endRect.left + "px";
+      clone.style.top = endRect.top + "px";
+      clone.style.width = endRect.width + "px";
+      clone.style.height = endRect.height + "px";
+      clone.style.opacity = "0";
+      clone.style.transform = "rotate(6deg)";
+    });
+    setTimeout(() => clone.remove(), 420);
+  });
+}
+
+function appendCornerMarks(el) {
+  ["tl", "tr", "bl", "br"].forEach(pos => {
+    const mark = document.createElement("span");
+    mark.className = "corner-mark " + pos;
+    el.appendChild(mark);
+  });
+}
+
+function renderHandStrip() {
+  const wrap = document.getElementById("handStrip");
+  wrap.innerHTML = "";
+  appendCornerMarks(wrap);
+
+  const header = document.createElement("div");
+  header.className = "hand-strip-header";
+  const title = document.createElement("h2");
+  title.textContent = "\u{1F590}\u{FE0F} Your Hand";
+  header.appendChild(title);
+  const handProjects = state.projects.filter(p => p.pile === "hand");
+  const count = document.createElement("span");
+  count.className = "hand-strip-count";
+  count.textContent = handProjects.length + "/" + HAND_LIMIT;
+  header.appendChild(count);
+  wrap.appendChild(header);
+
+  if (handProjects.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "hand-strip-empty";
+    empty.innerHTML = '<div class="hand-strip-empty-icon">\u{1F0CF}</div>Your hand is empty. Send a project here from the deck below to focus on it.';
+    wrap.appendChild(empty);
+    return;
+  }
+
+  const body = document.createElement("div");
+  body.className = "hand-strip-body";
+  handProjects.forEach(proj => {
+    const card = document.createElement("div");
+    card.className = "hand-card";
+    card.dataset.id = proj.id;
+    card.style.setProperty("--cat-color", CATEGORY_META[proj.category]);
+    card.addEventListener("click", () => openDetail(proj.id));
+
+    const h4 = document.createElement("h4");
+    h4.textContent = proj.name;
+    h4.dir = RTL_PATTERN.test(proj.name || "") ? "rtl" : "ltr";
+    card.appendChild(h4);
+
+    const handTypeline = document.createElement("div");
+    handTypeline.className = "hand-card-typeline";
+    handTypeline.appendChild(categoryTagEl(proj.category));
+    handTypeline.appendChild(statusPillEl(proj.statusIndex));
+    card.appendChild(handTypeline);
+
+    const actions = document.createElement("div");
+    actions.className = "hand-card-actions";
+    const toDeckBtn = document.createElement("button");
+    toDeckBtn.className = "btn secondary small-btn";
+    toDeckBtn.textContent = "↩ Deck";
+    toDeckBtn.addEventListener("click", e => { e.stopPropagation(); setPile(proj, "deck"); });
+    actions.appendChild(toDeckBtn);
+    const discardBtn = document.createElement("button");
+    discardBtn.className = "btn secondary small-btn";
+    discardBtn.textContent = "\u{1F5D1}\u{FE0F}";
+    discardBtn.addEventListener("click", e => { e.stopPropagation(); setPile(proj, "discard"); });
+    actions.appendChild(discardBtn);
+    card.appendChild(actions);
+
+    body.appendChild(card);
+  });
+  wrap.appendChild(body);
+}
+
+function renderDiscardPile() {
+  const wrap = document.getElementById("discardPile");
+  wrap.innerHTML = "";
+  const discarded = state.projects.filter(p => p.pile === "discard");
+
+  const header = document.createElement("div");
+  header.className = "discard-header";
+  const chevron = document.createElement("span");
+  chevron.className = "missions-chevron";
+  chevron.textContent = state.ui.discardCollapsed ? "▸" : "▾";
+  header.appendChild(chevron);
+  const title = document.createElement("h2");
+  title.textContent = "\u{1F5D1}\u{FE0F} Discard Pile";
+  header.appendChild(title);
+  const count = document.createElement("span");
+  count.className = "discard-count";
+  count.textContent = discarded.length;
+  header.appendChild(count);
+  header.addEventListener("click", () => {
+    state.ui.discardCollapsed = !state.ui.discardCollapsed;
+    saveState();
+    renderDiscardPile();
+  });
+  wrap.appendChild(header);
+
+  if (state.ui.discardCollapsed) return;
+
+  const body = document.createElement("div");
+  body.className = "discard-body";
+  if (discarded.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "missions-empty";
+    empty.textContent = "\u{1F578}\u{FE0F} No discarded projects. Archive a finished project here from its detail view.";
+    body.appendChild(empty);
+  } else {
+    discarded.forEach(proj => {
+      const row = document.createElement("div");
+      row.className = "discard-row";
+
+      const name = document.createElement("span");
+      name.className = "discard-name";
+      name.textContent = proj.name;
+      applyBidi(name, proj.name);
+      name.addEventListener("click", () => openDetail(proj.id));
+      row.appendChild(name);
+      row.appendChild(categoryTagEl(proj.category));
+
+      const restoreBtn = document.createElement("button");
+      restoreBtn.className = "btn secondary small-btn";
+      restoreBtn.textContent = "↩ Restore";
+      restoreBtn.addEventListener("click", () => setPile(proj, "deck"));
+      row.appendChild(restoreBtn);
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "icon-btn";
+      delBtn.textContent = "🗑️ Trash Forever";
+      delBtn.addEventListener("click", () => deleteProject(proj.id));
+      row.appendChild(delBtn);
+
+      body.appendChild(row);
+    });
+  }
+  wrap.appendChild(body);
+}
+
+function renderContent() {
+  renderSummary();
+  const content = document.getElementById("content");
+  content.innerHTML = "";
+  const projects = getFilteredProjects();
+
+  if (projects.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    if (state.projects.length === 0) {
+      empty.innerHTML = `
+        <div class="empty-icon">🗂️</div>
+        <h3>No projects yet</h3>
+        <p>Create your first project to start tracking it.</p>
+      `;
+      const btn = document.createElement("button");
+      btn.className = "btn";
+      btn.textContent = "+ Add Project";
+      btn.addEventListener("click", openAddBar);
+      empty.appendChild(btn);
+    } else {
+      empty.innerHTML = `
+        <div class="empty-icon">🔍</div>
+        <h3>No projects match your filters</h3>
+        <p>Try adjusting the search, category, status, or sort options.</p>
+      `;
+      const btn = document.createElement("button");
+      btn.className = "btn secondary";
+      btn.textContent = "Clear filters";
+      btn.addEventListener("click", resetFilters);
+      empty.appendChild(btn);
+    }
+    content.appendChild(empty);
+    return;
+  }
+
+  if (state.ui.view === "cards") {
+    content.appendChild(renderCardsView(projects));
+  } else {
+    content.appendChild(renderTableView(projects));
+  }
+}
+
+const RANK_GLYPHS = ["○", "◔", "◑", "◕", "●"];
+function statusPillEl(statusIndex) {
+  const pill = document.createElement("span");
+  pill.className = "status-pill";
+  pill.style.background = STAGES[statusIndex].color;
+  pill.textContent = RANK_GLYPHS[statusIndex] + " " + STAGES[statusIndex].name;
+  return pill;
+}
+
+function categoryTagEl(category) {
+  const tag = document.createElement("span");
+  tag.className = "tag";
+  tag.style.background = CATEGORY_META[category] + "22";
+  tag.style.color = CATEGORY_META[category];
+  tag.innerHTML = categoryIconHTML(category) + " " + category;
+  return tag;
+}
+
+const TIER_META = {
+  common: null,
+  rare: { label: "★ Rare" },
+  epic: { label: "★★ Epic" },
+  legendary: { label: "★★★ Legendary" }
+};
+function getCardTier(proj) {
+  const openTodos = proj.todos.filter(t => !t.done).length;
+  const isPerfect = openTodos === 0 && proj.todos.length > 0;
+  if (proj.statusIndex === STAGES.length - 1 && isPerfect) return "legendary";
+  if (proj.statusIndex >= STAGES.length - 2) return "epic";
+  if (proj.statusIndex >= 2) return "rare";
+  return "common";
+}
+
+function renderCardsView(projects) {
+  const grid = document.createElement("div");
+  grid.className = "cards-grid";
+  projects.forEach(proj => {
+    const tier = getCardTier(proj);
+
+    const card = document.createElement("div");
+    card.className = "project-card status-" + proj.statusIndex + " tier-" + tier;
+    const catColor = CATEGORY_META[proj.category];
+    card.style.setProperty("--cat-color", catColor);
+    card.style.setProperty("--cat-color-soft", catColor + "70");
+    const glow = glowVars(proj.statusIndex);
+    card.style.setProperty("--glow-blur", glow.blur);
+    card.style.setProperty("--glow-color", glow.color);
+    card.addEventListener("click", () => openDetail(proj.id));
+
+    ["tl", "tr", "bl", "br"].forEach(pos => {
+      const corner = document.createElement("span");
+      corner.className = "card-corner " + pos;
+      card.appendChild(corner);
+    });
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "card-delete";
+    delBtn.title = "Trash card";
+    delBtn.textContent = "✕";
+    delBtn.addEventListener("click", e => { e.stopPropagation(); trashCard(proj.id); });
+    card.appendChild(delBtn);
+
+    if (proj.pile !== "hand") {
+      const toHandBtn = document.createElement("button");
+      toHandBtn.className = "card-to-hand";
+      toHandBtn.title = "Send to hand";
+      toHandBtn.textContent = "\u{1F590}\u{FE0F}";
+      toHandBtn.addEventListener("click", e => { e.stopPropagation(); setPile(proj, "hand", e.currentTarget); });
+      card.appendChild(toHandBtn);
+    }
+
+    const header = document.createElement("div");
+    header.className = "card-header";
+    const banner = document.createElement("h3");
+    banner.textContent = proj.name;
+    banner.dir = RTL_PATTERN.test(proj.name || "") ? "rtl" : "ltr";
+    header.appendChild(banner);
+    card.appendChild(header);
+
+    const art = document.createElement("div");
+    art.className = "card-art";
+    art.innerHTML = categoryIconHTML(proj.category);
+    card.appendChild(art);
+
+    if (TIER_META[tier]) {
+      const tierBanner = document.createElement("div");
+      tierBanner.className = "tier-banner tier-" + tier;
+      tierBanner.textContent = TIER_META[tier].label;
+      card.appendChild(tierBanner);
+    }
+
+    const typeline = document.createElement("div");
+    typeline.className = "card-typeline";
+    typeline.appendChild(categoryTagEl(proj.category));
+    typeline.appendChild(statusPillEl(proj.statusIndex));
+    card.appendChild(typeline);
+
+    const doneCount = proj.todos.filter(t => t.done).length;
+    const rules = document.createElement("div");
+    rules.className = "card-rules";
+    rules.innerHTML = `
+      <span class="rule-line">✅ ${doneCount}/${proj.todos.length} quests complete</span>
+      ${proj.mapImage ? '<span class="rule-line">\u{1F5FA}\u{FE0F} Map charted</span>' : ""}
+      ${proj.notes.length ? `<span class="rule-line">\u{1F4DC} ${proj.notes.length} note${proj.notes.length === 1 ? "" : "s"}</span>` : ""}
+    `;
+    card.appendChild(rules);
+
+    if (proj.todos.length > 0) {
+      const tooltip = document.createElement("div");
+      tooltip.className = "card-quest-tooltip";
+      const tooltipTitle = document.createElement("div");
+      tooltipTitle.className = "card-quest-tooltip-title";
+      tooltipTitle.textContent = "\u{2694}\u{FE0F} Quests";
+      tooltip.appendChild(tooltipTitle);
+      const tooltipList = document.createElement("ul");
+      proj.todos.forEach(t => {
+        const li = document.createElement("li");
+        li.className = t.done ? "done" : "";
+        const mark = document.createElement("span");
+        mark.className = "check-mark";
+        mark.textContent = t.done ? "\u{2705}" : "\u{2B1C}";
+        li.appendChild(mark);
+        const label = document.createElement("span");
+        let labelText = t.text;
+        if (t.subs && t.subs.length) {
+          const d = t.subs.filter(s => s.done).length;
+          labelText += "  (" + d + "/" + t.subs.length + ")";
+        }
+        label.textContent = labelText;
+        applyBidi(label, t.text);
+        li.appendChild(label);
+        tooltipList.appendChild(li);
+      });
+      tooltip.appendChild(tooltipList);
+      card.appendChild(tooltip);
+    }
+
+    const leftBadge = document.createElement("div");
+    leftBadge.className = "card-stat-badge left";
+    leftBadge.textContent = `${doneCount}/${proj.todos.length}`;
+    card.appendChild(leftBadge);
+
+    grid.appendChild(card);
+  });
+
+  // TCG-style 3D tilt toward the cursor (skipped for reduced-motion users).
+  if (!REDUCED_MOTION) {
+    grid.addEventListener("mousemove", e => {
+      const card = e.target.closest(".project-card");
+      if (!card || !grid.contains(card)) return;
+      const r = card.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width - 0.5;
+      const py = (e.clientY - r.top) / r.height - 0.5;
+      card.style.transform =
+        "translateY(-4px) scale(1.015) rotateX(" + (-py * 7).toFixed(2) + "deg) rotateY(" + (px * 7).toFixed(2) + "deg)";
+    });
+    grid.addEventListener("mouseout", e => {
+      const card = e.target.closest(".project-card");
+      if (card && !card.contains(e.relatedTarget)) card.style.transform = "";
+    });
+  }
+  return grid;
+}
+
+function renderTableView(projects) {
+  const wrap = document.createElement("div");
+  wrap.className = "table-wrap";
+  const table = document.createElement("table");
+  table.className = "projects-table";
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Project</th>
+        <th>Kind</th>
+        <th>Status</th>
+        <th>Quests</th>
+        <th>Map</th>
+        <th></th>
+      </tr>
+    </thead>
+  `;
+  const tbody = document.createElement("tbody");
+  let dataRowIndex = 0;
+  projects.forEach(proj => {
+    const tr = document.createElement("tr");
+    if (dataRowIndex % 2 === 1) tr.classList.add("row-alt");
+    tr.classList.add("status-" + proj.statusIndex);
+    dataRowIndex++;
+    tr.addEventListener("click", () => openDetail(proj.id));
+
+    const tier = getCardTier(proj);
+    const tdName = document.createElement("td");
+    tdName.className = "table-name";
+    if (TIER_META[tier]) {
+      const tierDot = document.createElement("span");
+      tierDot.className = "table-tier-dot tier-" + tier;
+      tierDot.title = TIER_META[tier].label;
+      tdName.appendChild(tierDot);
+    }
+    const nameSpan = document.createElement("span");
+    nameSpan.textContent = proj.name;
+    tdName.appendChild(nameSpan);
+    applyBidi(tdName, proj.name);
+    tr.appendChild(tdName);
+
+    const tdCat = document.createElement("td");
+    tdCat.appendChild(categoryTagEl(proj.category));
+    tr.appendChild(tdCat);
+
+    const tdStatus = document.createElement("td");
+    tdStatus.appendChild(statusPillEl(proj.statusIndex));
+    tr.appendChild(tdStatus);
+
+    const doneCount = proj.todos.filter(t => t.done).length;
+    const tdTodos = document.createElement("td");
+    tdTodos.textContent = `${doneCount}/${proj.todos.length}`;
+    tr.appendChild(tdTodos);
+
+    const tdMap = document.createElement("td");
+    tdMap.textContent = proj.mapImage ? "🗺️" : "—";
+    tr.appendChild(tdMap);
+
+    const tdDelete = document.createElement("td");
+    if (proj.pile !== "hand") {
+      const toHandBtn = document.createElement("button");
+      toHandBtn.className = "table-delete";
+      toHandBtn.title = "Send to hand";
+      toHandBtn.textContent = "\u{1F590}\u{FE0F}";
+      toHandBtn.addEventListener("click", e => { e.stopPropagation(); setPile(proj, "hand", e.currentTarget); });
+      tdDelete.appendChild(toHandBtn);
+    }
+    const delBtn = document.createElement("button");
+    delBtn.className = "table-delete";
+    delBtn.title = "Trash card";
+    delBtn.textContent = "✕";
+    delBtn.addEventListener("click", e => { e.stopPropagation(); trashCard(proj.id); });
+    tdDelete.appendChild(delBtn);
+    tr.appendChild(tdDelete);
+
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  return wrap;
+}
+
+function deleteProject(id) {
+  const proj = state.projects.find(p => p.id === id);
+  if (!proj) return;
+  if (confirm(`Permanently trash "${proj.name}"? This cannot be undone.`)) {
+    state.projects = state.projects.filter(p => p.id !== id);
+    saveState();
+    if (openDetailId === id) {
+      closeDetail();
+    } else {
+      renderAll();
+    }
+  }
+}
+
+function trashCard(id) {
+  const proj = state.projects.find(p => p.id === id);
+  if (!proj) return;
+  if (proj.pile === "discard") {
+    deleteProject(id);
+    return;
+  }
+  const previousPile = proj.pile;
+  const name = proj.name;
+  proj.pile = "discard";
+  saveState();
+  renderAll();
+  if (openDetailId === id) renderDetail();
+  showUndoToast(`"${name}" sent to Discard.`, () => {
+    const p = state.projects.find(pp => pp.id === id);
+    if (!p) return;
+    p.pile = previousPile;
+    saveState();
+    renderAll();
+    if (openDetailId === id) renderDetail();
+  });
+}
+
+function showUndoToast(message, onUndo) {
+  const container = document.getElementById("toastContainer");
+  const toast = document.createElement("div");
+  toast.className = "toast";
+
+  const msg = document.createElement("span");
+  msg.textContent = message;
+  toast.appendChild(msg);
+
+  const undoBtn = document.createElement("button");
+  undoBtn.className = "toast-undo";
+  undoBtn.textContent = "Undo";
+  toast.appendChild(undoBtn);
+
+  let dismissed = false;
+  const timer = setTimeout(() => dismiss(), 6000);
+  function dismiss() {
+    if (dismissed) return;
+    dismissed = true;
+    clearTimeout(timer);
+    toast.remove();
+  }
+  undoBtn.addEventListener("click", () => {
+    dismiss();
+    onUndo();
+  });
+
+  container.appendChild(toast);
+}
+
+function exportBackup() {
+  const data = JSON.stringify(state, null, 2);
+  const blob = new Blob([data], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `project-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function importBackup(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    let parsed;
+    try {
+      parsed = JSON.parse(reader.result);
+    } catch (e) {
+      alert("That file is not valid JSON and could not be imported.");
+      return;
+    }
+    if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.projects)) {
+      alert("That file doesn't look like a Project Tracker backup.");
+      return;
+    }
+    if (!confirm("Importing will replace ALL current projects, missions, and notes with the contents of this backup. This cannot be undone. Continue?")) {
+      return;
+    }
+    state = migrateState(parsed);
+    saveState();
+    closeDetail();
+    renderToolbar();
+    renderMissionsPanel();
+    renderNotesPanel();
+    renderAll();
+    alert("Backup imported successfully.");
+  };
+  reader.onerror = () => alert("Could not read that file.");
+  reader.readAsText(file);
+}
+
+document.getElementById("exportBtn").addEventListener("click", exportBackup);
+document.getElementById("importBtn").addEventListener("click", () => {
+  document.getElementById("importFileInput").click();
+});
+document.getElementById("importFileInput").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (file) importBackup(file);
+  e.target.value = "";
+});
+
+/* ---------- Detail modal ---------- */
+
+const detailOverlay = document.getElementById("detailOverlay");
+const detailTitle = document.getElementById("detailTitle");
+const detailBody = document.getElementById("detailBody");
+
+document.getElementById("detailCloseBtn").addEventListener("click", closeDetail);
+document.getElementById("detailDeleteBtn").addEventListener("click", () => {
+  if (openDetailId) trashCard(openDetailId);
+});
+detailOverlay.addEventListener("click", e => { if (e.target === detailOverlay) closeDetail(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeDetail(); });
+
+detailTitle.addEventListener("input", () => {
+  const proj = state.projects.find(p => p.id === openDetailId);
+  if (!proj) return;
+  proj.name = detailTitle.value;
+  applyBidi(detailTitle, detailTitle.value);
+  saveState();
+  renderHandStrip();
+  renderDiscardPile();
+  renderContent();
+});
+detailTitle.addEventListener("blur", () => {
+  const proj = state.projects.find(p => p.id === openDetailId);
+  if (!proj) return;
+  proj.name = detailTitle.value.trim() || "Untitled Project";
+  detailTitle.value = proj.name;
+  applyBidi(detailTitle, proj.name);
+  saveState();
+  renderHandStrip();
+  renderDiscardPile();
+  renderContent();
+});
+detailTitle.addEventListener("keydown", e => {
+  if (e.key === "Enter") detailTitle.blur();
+});
+
+function openDetail(id) {
+  openDetailId = id;
+  renderDetail();
+  detailOverlay.classList.add("visible");
+}
+function closeDetail() {
+  openDetailId = null;
+  detailOverlay.classList.remove("visible");
+  renderAll();
+}
+
+function renderPileControl(proj) {
+  const box = document.createElement("div");
+  box.className = "pile-control";
+  const label = document.createElement("span");
+  label.className = "pile-control-label";
+  label.textContent = "Pile:";
+  box.appendChild(label);
+  PILE_OPTIONS.forEach(opt => {
+    const btn = document.createElement("button");
+    btn.className = "chip" + (proj.pile === opt.value ? " active" : "");
+    btn.textContent = opt.label;
+    if (proj.pile === opt.value) btn.style.background = "#323338";
+    btn.addEventListener("click", (e) => setPile(proj, opt.value, e.currentTarget));
+    box.appendChild(btn);
+  });
+  return box;
+}
+
+function renderDetail() {
+  const proj = state.projects.find(p => p.id === openDetailId);
+  if (!proj) { closeDetail(); return; }
+
+  const panel = document.getElementById("detailPanel");
+  const catColor = CATEGORY_META[proj.category];
+  panel.style.setProperty("--modal-accent", catColor);
+  panel.style.setProperty("--modal-accent-soft", catColor + "33");
+  document.getElementById("detailCatIcon").innerHTML = categoryIconHTML(proj.category);
+
+  const tier = getCardTier(proj);
+  const ribbon = document.getElementById("detailTierRibbon");
+  if (TIER_META[tier]) {
+    ribbon.textContent = TIER_META[tier].label;
+    ribbon.className = "modal-tier-ribbon visible tier-" + tier;
+  } else {
+    ribbon.textContent = "";
+    ribbon.className = "modal-tier-ribbon";
+  }
+
+  detailTitle.value = proj.name;
+  applyBidi(detailTitle, proj.name);
+  detailBody.innerHTML = "";
+  detailBody.appendChild(renderStepper(proj));
+  detailBody.appendChild(renderPileControl(proj));
+
+  const stack = document.createElement("div");
+  stack.className = "detail-stack";
+  stack.appendChild(renderQuestLog(proj));
+  stack.appendChild(renderProjectNotesBox(proj));
+  stack.appendChild(renderMapBox(proj));
+  detailBody.appendChild(stack);
+}
+
+function persistAndRefresh() {
+  saveState();
+  renderDetail();
+  renderHandStrip();
+  renderDiscardPile();
+  renderStatsPanel();
+  renderContent();
+}
+
+function renderStepper(proj) {
+  const stepper = document.createElement("div");
+  stepper.className = "stepper";
+  STAGES.forEach((stage, i) => {
+    const step = document.createElement("div");
+    step.className = "step" + (i < proj.statusIndex ? " done" : i === proj.statusIndex ? " active" : "");
+    const dotBg = i <= proj.statusIndex ? stage.color : "var(--card-bg)";
+    const dotBorder = i <= proj.statusIndex ? stage.color : "var(--border)";
+    step.innerHTML = `<div class="dot" style="background:${dotBg};border-color:${dotBorder}">${i < proj.statusIndex ? "&#10003;" : i + 1}</div><div class="label">${stage.name}</div>`;
+    step.addEventListener("click", () => {
+      proj.statusIndex = i;
+      persistAndRefresh();
+    });
+    stepper.appendChild(step);
+  });
+  return stepper;
+}
+
+function buildNoteEntry(note, refresh, remove) {
+  const entry = document.createElement("div");
+  entry.className = "note-entry";
+
+  const icon = document.createElement("span");
+  icon.className = "note-icon";
+  icon.textContent = "\u{1F4DC}";
+  entry.appendChild(icon);
+
+  const text = document.createElement("div");
+  text.className = "note-text editable";
+  text.title = "Click to edit";
+  text.textContent = note.text;
+  applyBidi(text, note.text);
+  text.addEventListener("click", () => {
+    const textarea = document.createElement("textarea");
+    textarea.className = "note-edit-input";
+    textarea.value = note.text;
+    textarea.dir = "auto";
+    textarea.rows = Math.max(2, note.text.split("\n").length);
+    entry.replaceChild(textarea, text);
+    textarea.focus();
+    textarea.select();
+    let finished = false;
+    function finish(shouldSave) {
+      if (finished) return;
+      finished = true;
+      const val = textarea.value.trim();
+      if (shouldSave && val && val !== note.text) {
+        note.text = val;
+        refresh();
+      } else if (textarea.parentNode === entry) {
+        entry.replaceChild(text, textarea);
+      }
+    }
+    textarea.addEventListener("blur", () => finish(true));
+    textarea.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); finish(true); }
+      else if (e.key === "Escape") { e.preventDefault(); finished = true; entry.replaceChild(text, textarea); }
+    });
+  });
+  entry.appendChild(text);
+
+  const delBtn = document.createElement("button");
+  delBtn.className = "note-delete";
+  delBtn.title = "Delete note";
+  delBtn.textContent = "✕";
+  delBtn.addEventListener("click", remove);
+  entry.appendChild(delBtn);
+
+  return entry;
+}
+
+function renderProjectNotesBox(proj) {
+  const box = document.createElement("div");
+  box.className = "section-box notes-box";
+  const h4 = document.createElement("h4");
+  h4.textContent = "\u{1F4DC} Notes";
+  box.appendChild(h4);
+
+  const inputRow = document.createElement("div");
+  inputRow.className = "item-input";
+  const textarea = document.createElement("textarea");
+  textarea.className = "note-input";
+  textarea.rows = 2;
+  textarea.placeholder = "Write a note...";
+  textarea.dir = "auto";
+  const addBtn = document.createElement("button");
+  addBtn.className = "btn small-btn";
+  addBtn.textContent = "Add";
+  function addNote() {
+    const val = textarea.value.trim();
+    if (!val) return;
+    proj.notes.push({ text: val });
+    textarea.value = "";
+    persistAndRefresh();
+  }
+  addBtn.addEventListener("click", addNote);
+  textarea.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); addNote(); }
+  });
+  inputRow.appendChild(textarea);
+  inputRow.appendChild(addBtn);
+  box.appendChild(inputRow);
+
+  if (proj.notes.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "missions-empty";
+    empty.textContent = "\u{1F4DC} No notes yet. Add one above.";
+    box.appendChild(empty);
+  } else {
+    const list = document.createElement("div");
+    list.className = "notes-list";
+    proj.notes.forEach((note, idx) => {
+      list.appendChild(buildNoteEntry(
+        note,
+        () => persistAndRefresh(),
+        () => { proj.notes.splice(idx, 1); persistAndRefresh(); }
+      ));
+    });
+    box.appendChild(list);
+  }
+
+  return box;
+}
+
+function renderQuestLog(proj) {
+  const box = document.createElement("div");
+  box.className = "section-box quest-log-box";
+  const h4 = document.createElement("h4");
+  h4.textContent = "\u{2694}\u{FE0F} Quest Log";
+  box.appendChild(h4);
+
+  const inputRow = document.createElement("div");
+  inputRow.className = "item-input";
+  const input = document.createElement("input");
+  input.type = "text";
+  input.placeholder = "Add a quest...";
+  input.dir = "auto";
+  const addBtn = document.createElement("button");
+  addBtn.className = "btn small-btn";
+  addBtn.textContent = "Add";
+  function addQuest() {
+    const val = input.value.trim();
+    if (!val) return;
+    proj.todos.push({ text: val, description: "", subs: [], done: false });
+    input.value = "";
+    persistAndRefresh();
+  }
+  addBtn.addEventListener("click", addQuest);
+  input.addEventListener("keydown", e => { if (e.key === "Enter") addQuest(); });
+  inputRow.appendChild(input);
+  inputRow.appendChild(addBtn);
+  box.appendChild(inputRow);
+
+  if (proj.todos.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "missions-empty";
+    empty.textContent = "No quests yet. Add one above.";
+    box.appendChild(empty);
+    return box;
+  }
+
+  const list = document.createElement("div");
+  list.className = "quest-list";
+  proj.todos.forEach((quest, idx) => {
+    list.appendChild(renderQuestCard(proj, quest, idx));
+  });
+  box.appendChild(list);
+  return box;
+}
+
+const collapsedQuests = new WeakSet();
+
+function renderQuestCard(proj, quest, idx) {
+  const card = document.createElement("div");
+  const collapsed = collapsedQuests.has(quest);
+  card.className = "quest-card" + (quest.done ? " done" : "") + (collapsed ? " collapsed" : "");
+
+  const head = document.createElement("div");
+  head.className = "quest-card-head";
+
+  const chevron = document.createElement("button");
+  chevron.type = "button";
+  chevron.className = "quest-chevron";
+  chevron.textContent = collapsed ? "▸" : "▾";
+  chevron.title = collapsed ? "Expand quest" : "Collapse quest";
+  chevron.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (collapsedQuests.has(quest)) {
+      collapsedQuests.delete(quest);
+      card.classList.remove("collapsed");
+      chevron.textContent = "▾";
+      chevron.title = "Collapse quest";
+    } else {
+      collapsedQuests.add(quest);
+      card.classList.add("collapsed");
+      chevron.textContent = "▸";
+      chevron.title = "Expand quest";
+    }
+  });
+  head.appendChild(chevron);
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "entry-toggle quest-seal";
+  toggle.setAttribute("aria-label", quest.done ? "Mark incomplete" : "Mark complete");
+  toggle.textContent = quest.done ? "✓" : "";
+  toggle.addEventListener("click", () => { quest.done = !quest.done; persistAndRefresh(); });
+  head.appendChild(toggle);
+
+  const name = document.createElement("span");
+  name.className = "quest-name text editable";
+  name.textContent = quest.text;
+  name.title = "Click to edit quest name";
+  applyBidi(name, quest.text);
+  name.addEventListener("click", () =>
+    startInlineEdit(head, name, quest.text, (v) => { quest.text = v; persistAndRefresh(); })
+  );
+  head.appendChild(name);
+
+  if (quest.subs.length) {
+    const done = quest.subs.filter(s => s.done).length;
+    if (quest.subs.length <= 10) {
+      const pips = document.createElement("span");
+      pips.className = "quest-pips";
+      quest.subs.forEach(s => {
+        const pip = document.createElement("span");
+        pip.className = "quest-pip" + (s.done ? " done" : "");
+        pips.appendChild(pip);
+      });
+      head.appendChild(pips);
+    }
+    const prog = document.createElement("span");
+    prog.className = "quest-sub-count";
+    prog.textContent = done + "/" + quest.subs.length;
+    head.appendChild(prog);
+  }
+
+  const del = document.createElement("button");
+  del.className = "entry-delete";
+  del.title = "Delete quest";
+  del.textContent = "✕";
+  del.addEventListener("click", () => { proj.todos.splice(idx, 1); persistAndRefresh(); });
+  head.appendChild(del);
+
+  card.appendChild(head);
+
+  const desc = document.createElement("div");
+  desc.className = "quest-desc editable" + (quest.description ? "" : " empty");
+  desc.textContent = quest.description || "Add a description...";
+  if (quest.description) applyBidi(desc, quest.description);
+  desc.title = "Click to edit description";
+  desc.addEventListener("click", () => {
+    const ta = document.createElement("textarea");
+    ta.className = "note-edit-input";
+    ta.value = quest.description || "";
+    ta.dir = "auto";
+    ta.rows = Math.max(2, (quest.description || "").split("\n").length);
+    card.replaceChild(ta, desc);
+    ta.focus();
+    let finished = false;
+    function finish(shouldSave) {
+      if (finished) return;
+      finished = true;
+      if (shouldSave) { quest.description = ta.value.trim(); persistAndRefresh(); }
+      else if (ta.parentNode === card) { card.replaceChild(desc, ta); }
+    }
+    ta.addEventListener("blur", () => finish(true));
+    ta.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); finish(true); }
+      else if (e.key === "Escape") { e.preventDefault(); finished = true; card.replaceChild(desc, ta); }
+    });
+  });
+  card.appendChild(desc);
+
+  const subs = document.createElement("div");
+  subs.className = "quest-subs";
+
+  if (quest.subs.length) {
+    const subList = document.createElement("ul");
+    subList.className = "item-list quest-sub-list";
+    quest.subs.forEach((sub, sIdx) => {
+      subList.appendChild(createEntryItem(
+        sub,
+        "var(--accent)",
+        () => { sub.done = !sub.done; persistAndRefresh(); },
+        () => { quest.subs.splice(sIdx, 1); persistAndRefresh(); },
+        (v) => { sub.text = v; persistAndRefresh(); }
+      ));
+    });
+    subs.appendChild(subList);
+  }
+
+  const subInputRow = document.createElement("div");
+  subInputRow.className = "item-input quest-sub-input";
+  const subInput = document.createElement("input");
+  subInput.type = "text";
+  subInput.placeholder = "Add a sub-mission...";
+  subInput.dir = "auto";
+  const subAdd = document.createElement("button");
+  subAdd.className = "btn secondary small-btn";
+  subAdd.textContent = "+ Sub";
+  function addSub() {
+    const val = subInput.value.trim();
+    if (!val) return;
+    quest.subs.push({ text: val, done: false });
+    subInput.value = "";
+    persistAndRefresh();
+  }
+  subAdd.addEventListener("click", addSub);
+  subInput.addEventListener("keydown", e => { if (e.key === "Enter") addSub(); });
+  subInputRow.appendChild(subInput);
+  subInputRow.appendChild(subAdd);
+  subs.appendChild(subInputRow);
+
+  card.appendChild(subs);
+  return card;
+}
+
+function renderMapBox(proj) {
+  const box = document.createElement("div");
+  box.className = "section-box map-box";
+  const h4 = document.createElement("h4");
+  h4.textContent = "\u{1F5FA}\u{FE0F} Map";
+  box.appendChild(h4);
+
+  if (proj.mapImage) {
+    const img = document.createElement("img");
+    img.className = "map-preview";
+    img.src = proj.mapImage;
+    box.appendChild(img);
+  } else {
+    const placeholder = document.createElement("div");
+    placeholder.className = "map-placeholder";
+    placeholder.textContent = "No map image uploaded yet.";
+    box.appendChild(placeholder);
+  }
+
+  const controls = document.createElement("div");
+  controls.className = "map-controls";
+
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = "image/*";
+  fileInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      proj.mapImage = ev.target.result;
+      persistAndRefresh();
+    };
+    reader.readAsDataURL(file);
+  });
+  controls.appendChild(fileInput);
+
+  if (proj.mapImage) {
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "btn secondary small-btn";
+    removeBtn.textContent = "Remove image";
+    removeBtn.addEventListener("click", () => {
+      proj.mapImage = null;
+      persistAndRefresh();
+    });
+    controls.appendChild(removeBtn);
+  }
+
+  box.appendChild(controls);
+  return box;
+}
+
+function createEntryItem(item, accentVar, onToggle, onDelete, onEdit) {
+  const li = document.createElement("li");
+  li.className = "entry-item" + (item.done ? " done" : "");
+  li.style.setProperty("--entry-accent", accentVar);
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "entry-toggle";
+  toggle.setAttribute("aria-label", item.done ? "Mark incomplete" : "Mark complete");
+  toggle.textContent = item.done ? "✓" : "";
+  toggle.addEventListener("click", onToggle);
+  li.appendChild(toggle);
+
+  const span = document.createElement("span");
+  span.className = "text";
+  span.textContent = item.text;
+  applyBidi(span, item.text);
+  if (onEdit) {
+    span.title = "Click to edit";
+    span.classList.add("editable");
+    span.addEventListener("click", () => startInlineEdit(li, span, item.text, onEdit));
+  }
+  li.appendChild(span);
+
+  const delBtn = document.createElement("button");
+  delBtn.className = "entry-delete";
+  delBtn.title = "Delete";
+  delBtn.textContent = "✕";
+  delBtn.addEventListener("click", onDelete);
+  li.appendChild(delBtn);
+
+  return li;
+}
+
+function startInlineEdit(container, displayEl, currentText, onSave) {
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "entry-edit-input";
+  input.value = currentText;
+  input.dir = "auto";
+  container.replaceChild(input, displayEl);
+  input.focus();
+  input.select();
+
+  let finished = false;
+  function finish(shouldSave) {
+    if (finished) return;
+    finished = true;
+    const val = input.value.trim();
+    if (shouldSave && val && val !== currentText) {
+      onSave(val);
+    } else if (input.parentNode === container) {
+      container.replaceChild(displayEl, input);
+    }
+  }
+  input.addEventListener("blur", () => finish(true));
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); finish(true); }
+    else if (e.key === "Escape") { e.preventDefault(); finished = true; container.replaceChild(displayEl, input); }
+  });
+}
+
+/* ---------- General Missions (global, not tied to any project) ---------- */
+
+function renderMissionsPanel() {
+  const panel = document.getElementById("missionsPanel");
+  panel.innerHTML = "";
+  appendCornerMarks(panel);
+
+  const header = document.createElement("div");
+  header.className = "missions-header";
+
+  const chevron = document.createElement("span");
+  chevron.className = "missions-chevron";
+  chevron.textContent = state.ui.missionsCollapsed ? "▸" : "▾";
+  header.appendChild(chevron);
+
+  const title = document.createElement("h2");
+  title.textContent = "⚔️ General Missions";
+  header.appendChild(title);
+
+  const openCount = state.globalMissions.filter(m => !m.done).length;
+  const countBadge = document.createElement("span");
+  countBadge.className = "missions-count";
+  countBadge.textContent = openCount + " open";
+  header.appendChild(countBadge);
+
+  header.addEventListener("click", () => {
+    state.ui.missionsCollapsed = !state.ui.missionsCollapsed;
+    saveState();
+    renderMissionsPanel();
+  });
+  panel.appendChild(header);
+
+  if (state.ui.missionsCollapsed) return;
+
+  const body = document.createElement("div");
+  body.className = "missions-body";
+
+  const inputRow = document.createElement("div");
+  inputRow.className = "item-input";
+  const input = document.createElement("input");
+  input.type = "text";
+  input.placeholder = "Add a general mission...";
+  input.dir = "auto";
+  const addBtn = document.createElement("button");
+  addBtn.className = "btn small-btn";
+  addBtn.textContent = "Add";
+  function addMission() {
+    const val = input.value.trim();
+    if (!val) return;
+    state.globalMissions.push({ text: val, done: false });
+    input.value = "";
+    saveState();
+    renderMissionsPanel();
+  }
+  addBtn.addEventListener("click", addMission);
+  input.addEventListener("keydown", e => { if (e.key === "Enter") addMission(); });
+  inputRow.appendChild(input);
+  inputRow.appendChild(addBtn);
+  body.appendChild(inputRow);
+
+  if (state.globalMissions.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "missions-empty";
+    empty.textContent = "No general missions yet. Add one above.";
+    body.appendChild(empty);
+  } else {
+    const list = document.createElement("ul");
+    list.className = "item-list";
+    state.globalMissions.forEach((m, idx) => {
+      const li = createEntryItem(
+        m,
+        "var(--accent)",
+        () => { m.done = !m.done; saveState(); renderMissionsPanel(); },
+        () => { state.globalMissions.splice(idx, 1); saveState(); renderMissionsPanel(); },
+        (newText) => { m.text = newText; saveState(); renderMissionsPanel(); }
+      );
+      list.appendChild(li);
+    });
+    body.appendChild(list);
+  }
+
+  panel.appendChild(body);
+}
+
+function renderStatsPanel() {
+  const panel = document.getElementById("statsPanel");
+  panel.innerHTML = "";
+  appendCornerMarks(panel);
+
+  const header = document.createElement("div");
+  header.className = "missions-header";
+
+  const chevron = document.createElement("span");
+  chevron.className = "missions-chevron";
+  chevron.textContent = state.ui.statsCollapsed ? "▸" : "▾";
+  header.appendChild(chevron);
+
+  const title = document.createElement("h2");
+  title.textContent = "\u{1F4CA} Deck Statistics";
+  header.appendChild(title);
+
+  const countBadge = document.createElement("span");
+  countBadge.className = "missions-count";
+  countBadge.textContent = state.projects.length + " total";
+  header.appendChild(countBadge);
+
+  header.addEventListener("click", () => {
+    state.ui.statsCollapsed = !state.ui.statsCollapsed;
+    saveState();
+    renderStatsPanel();
+  });
+  panel.appendChild(header);
+
+  if (state.ui.statsCollapsed) return;
+
+  const body = document.createElement("div");
+  body.className = "stats-body";
+  const total = state.projects.length;
+
+  function statBar(label, segments) {
+    const row = document.createElement("div");
+    row.className = "stats-row";
+
+    const rowLabel = document.createElement("div");
+    rowLabel.className = "stats-row-label";
+    rowLabel.textContent = label;
+    row.appendChild(rowLabel);
+
+    const bar = document.createElement("div");
+    bar.className = "stats-bar";
+    segments.forEach(seg => {
+      if (seg.count <= 0) return;
+      const fill = document.createElement("div");
+      fill.className = "stats-bar-fill";
+      fill.style.width = (total ? (seg.count / total * 100) : 0) + "%";
+      fill.style.background = seg.color;
+      fill.title = seg.label + ": " + seg.count;
+      bar.appendChild(fill);
+    });
+    row.appendChild(bar);
+
+    const legend = document.createElement("div");
+    legend.className = "stats-legend";
+    legend.innerHTML = segments.filter(s => s.count > 0).map(s =>
+      `<span><span class="stats-dot" style="background:${s.color}"></span>${s.label} ${s.count}</span>`
+    ).join("");
+    row.appendChild(legend);
+
+    return row;
+  }
+
+  if (total === 0) {
+    const empty = document.createElement("div");
+    empty.className = "missions-empty";
+    empty.textContent = "No projects yet — add one to see stats.";
+    body.appendChild(empty);
+  } else {
+    body.appendChild(statBar("Kind", CATEGORIES.map(cat => ({
+      label: cat,
+      count: state.projects.filter(p => p.category === cat).length,
+      color: CATEGORY_META[cat]
+    }))));
+
+    body.appendChild(statBar("Status", STAGES.map((s, i) => ({
+      label: s.name,
+      count: state.projects.filter(p => p.statusIndex === i).length,
+      color: s.color
+    }))));
+
+    const pileColors = { deck: "#0073ea", hand: "#fdab3d", discard: "#676879" };
+    body.appendChild(statBar("Pile", PILE_OPTIONS.map(o => ({
+      label: o.label.replace(/^\S+\s/, ""),
+      count: state.projects.filter(p => p.pile === o.value).length,
+      color: pileColors[o.value]
+    }))));
+
+    const totalTodos = state.projects.reduce((sum, p) => sum + p.todos.length, 0);
+    const doneTodos = state.projects.reduce((sum, p) => sum + p.todos.filter(t => t.done).length, 0);
+    const totalNotes = state.projects.reduce((sum, p) => sum + p.notes.length, 0);
+
+    const summaryRow = document.createElement("div");
+    summaryRow.className = "stats-summary-row";
+    summaryRow.innerHTML = `
+      <span>\u{2694}\u{FE0F} Quests: <strong>${doneTodos}/${totalTodos}</strong> complete</span>
+      <span>\u{1F4DC} Notes: <strong>${totalNotes}</strong></span>
+    `;
+    body.appendChild(summaryRow);
+  }
+
+  panel.appendChild(body);
+}
+
+function renderNotesPanel() {
+  const panel = document.getElementById("notesPanel");
+  panel.innerHTML = "";
+  appendCornerMarks(panel);
+
+  const header = document.createElement("div");
+  header.className = "missions-header";
+
+  const chevron = document.createElement("span");
+  chevron.className = "missions-chevron";
+  chevron.textContent = state.ui.notesCollapsed ? "▸" : "▾";
+  header.appendChild(chevron);
+
+  const title = document.createElement("h2");
+  title.textContent = "\u{1F4DC} General Notes";
+  header.appendChild(title);
+
+  const countBadge = document.createElement("span");
+  countBadge.className = "missions-count";
+  countBadge.textContent = state.generalNotes.length + (state.generalNotes.length === 1 ? " note" : " notes");
+  header.appendChild(countBadge);
+
+  header.addEventListener("click", () => {
+    state.ui.notesCollapsed = !state.ui.notesCollapsed;
+    saveState();
+    renderNotesPanel();
+  });
+  panel.appendChild(header);
+
+  if (state.ui.notesCollapsed) return;
+
+  const body = document.createElement("div");
+  body.className = "missions-body";
+
+  const inputRow = document.createElement("div");
+  inputRow.className = "item-input";
+  const textarea = document.createElement("textarea");
+  textarea.className = "note-input";
+  textarea.rows = 2;
+  textarea.placeholder = "Write a note...";
+  textarea.dir = "auto";
+  const addBtn = document.createElement("button");
+  addBtn.className = "btn small-btn";
+  addBtn.textContent = "Add";
+  function addNote() {
+    const val = textarea.value.trim();
+    if (!val) return;
+    state.generalNotes.push({ text: val });
+    textarea.value = "";
+    saveState();
+    renderNotesPanel();
+  }
+  addBtn.addEventListener("click", addNote);
+  textarea.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); addNote(); }
+  });
+  inputRow.appendChild(textarea);
+  inputRow.appendChild(addBtn);
+  body.appendChild(inputRow);
+
+  if (state.generalNotes.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "missions-empty";
+    empty.textContent = "\u{1F4DC} No notes yet. Add one above.";
+    body.appendChild(empty);
+  } else {
+    const list = document.createElement("div");
+    list.className = "notes-list";
+    state.generalNotes.forEach((note, idx) => {
+      list.appendChild(buildNoteEntry(
+        note,
+        () => { saveState(); renderNotesPanel(); },
+        () => { state.generalNotes.splice(idx, 1); saveState(); renderNotesPanel(); }
+      ));
+    });
+    body.appendChild(list);
+  }
+
+  panel.appendChild(body);
+}
+
+function renderPresetsList() {
+  const list = document.getElementById("presetList");
+  list.innerHTML = "";
+  if (state.filterPresets.length === 0) {
+    const empty = document.createElement("span");
+    empty.className = "preset-empty";
+    empty.textContent = "No saved presets yet.";
+    list.appendChild(empty);
+    return;
+  }
+  state.filterPresets.forEach((preset, idx) => {
+    const pill = document.createElement("div");
+    pill.className = "preset-pill";
+
+    const chip = document.createElement("button");
+    chip.className = "chip preset-chip";
+    chip.textContent = "\u{1F516} " + preset.name;
+    chip.title = "Apply this saved filter combination";
+    chip.addEventListener("click", () => applyPreset(preset));
+    pill.appendChild(chip);
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "preset-delete";
+    delBtn.textContent = "✕";
+    delBtn.title = "Delete preset";
+    delBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      state.filterPresets.splice(idx, 1);
+      saveState();
+      renderPresetsList();
+    });
+    pill.appendChild(delBtn);
+
+    list.appendChild(pill);
+  });
+}
+
+function applyPreset(preset) {
+  state.ui.categoryFilters = preset.categoryFilters.slice();
+  state.ui.statusFilters = preset.statusFilters.slice();
+  state.ui.todoFilters = preset.todoFilters.slice();
+  state.ui.pileFilters = preset.pileFilters.slice();
+  state.ui.sortBy = preset.sortBy;
+  state.ui.searchQuery = preset.searchQuery;
+  saveState();
+  renderToolbar();
+  renderContent();
+}
+
+function savePreset(name) {
+  state.filterPresets.push({
+    name,
+    categoryFilters: state.ui.categoryFilters.slice(),
+    statusFilters: state.ui.statusFilters.slice(),
+    todoFilters: state.ui.todoFilters.slice(),
+    pileFilters: state.ui.pileFilters.slice(),
+    sortBy: state.ui.sortBy,
+    searchQuery: state.ui.searchQuery
+  });
+  saveState();
+  renderPresetsList();
+}
+
+const presetNameInput = document.getElementById("presetNameInput");
+const presetSaveBtn = document.getElementById("presetSaveBtn");
+function confirmSavePreset() {
+  const name = presetNameInput.value.trim();
+  if (!name) return;
+  savePreset(name);
+  presetNameInput.value = "";
+}
+presetSaveBtn.addEventListener("click", confirmSavePreset);
+presetNameInput.addEventListener("keydown", e => { if (e.key === "Enter") confirmSavePreset(); });
+
+renderToolbar();
+renderMissionsPanel();
+renderNotesPanel();
+renderAll();
+
+// Connect to the shared backend if it's configured (otherwise stays local).
+initBackend();
+</script>
+
+</body>
+</html>
