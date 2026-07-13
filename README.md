@@ -85,14 +85,25 @@ key are public. There's a **🚪 Sign out** button in the footer.
 ## 4. Roles & permissions
 
 Admins can restrict what each teammate may do. Open the **👥 Team** button in
-the footer (admins only) and assign a role to each login email:
+the footer (admins only) and assign a role — and an optional **display name** —
+to each login email:
 
-- **Admin** — full access.
+- **Admin** — full access; the only role that can manage the team, import
+  backups, permanently delete projects, and clear the activity log.
+- **Editor (everything except delete)** — may do everything an admin can
+  *except* the admin-only actions above (can still trash/restore projects).
 - **To-do editor — all projects** — may add/complete/edit/delete **to-dos** on
-  any project; cannot add/delete projects, change status, edit notes, etc.
-- **To-do editor — At Service only** — same, but only on projects whose status
-  is **At Service**. This role also *sees only* At Service projects.
+  any project; nothing else.
+- **To-do editor — At Service only** — to-dos only on At Service projects, and
+  *sees only* At Service projects.
+- **To-do editor — Dolley / XY / Pinch only** — to-dos only on projects of that
+  category, and *sees only* that category.
 - **Viewer** — read-only.
+
+**Display names:** set a name per person in the Team panel (admins only) and it
+shows in comments, the activity log, and the footer instead of the email.
+**Activity filter:** the Activity panel has a *By user* dropdown to see just one
+person's changes.
 
 The **General To-Do's, General Notes and Project Statistics** panels are hidden
 from to-do editors (admins and viewers still see them). Anyone not listed is a

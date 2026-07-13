@@ -3049,6 +3049,7 @@ function migrateState(parsed) {
   if (typeof parsed.ui.dueFilter !== "string") parsed.ui.dueFilter = "all";
   if (!Array.isArray(parsed.activity)) parsed.activity = [];
   if (!parsed.roles || typeof parsed.roles !== "object" || Array.isArray(parsed.roles)) parsed.roles = {};
+  if (!parsed.displayNames || typeof parsed.displayNames !== "object" || Array.isArray(parsed.displayNames)) parsed.displayNames = {};
   if (!Array.isArray(parsed.filterPresets)) parsed.filterPresets = [];
   if (typeof parsed.generalNotes === "string") {
     parsed.generalNotes = parsed.generalNotes.trim() ? [{ text: parsed.generalNotes }] : [];
@@ -3087,6 +3088,7 @@ function loadState() {
         generalNotes: [],
         activity: [],
         roles: {},
+        displayNames: {},
         filterPresets: [],
         seedMerged: true,
         ui: {
@@ -3118,6 +3120,7 @@ function loadState() {
     generalNotes: [],
     activity: [],
     roles: {},
+    displayNames: {},
     filterPresets: [],
     seedMerged: true,
     ui: {
@@ -3217,6 +3220,7 @@ function sharedSnapshot() {
     generalNotes: state.generalNotes,
     activity: state.activity,
     roles: state.roles,
+    displayNames: state.displayNames,
     seedMerged: state.seedMerged
   };
 }
@@ -3229,6 +3233,7 @@ function applySharedData(remote) {
   if (Array.isArray(remote.generalNotes)) state.generalNotes = remote.generalNotes;
   if (Array.isArray(remote.activity)) state.activity = remote.activity;
   if (remote.roles && typeof remote.roles === "object" && !Array.isArray(remote.roles)) state.roles = remote.roles;
+  if (remote.displayNames && typeof remote.displayNames === "object" && !Array.isArray(remote.displayNames)) state.displayNames = remote.displayNames;
   if (typeof remote.seedMerged === "boolean") state.seedMerged = remote.seedMerged;
   // Normalize shape (adds any missing fields on incoming records).
   state = migrateState(state);
@@ -3261,13 +3266,20 @@ let currentUserEmail = null;
    keeps trusted users in their lane.
    ============================================================ */
 const BOOTSTRAP_ADMINS = ["razcohen7676@gmail.com"];
-const ROLE_LABELS = {
-  "admin": "Admin (full access)",
-  "todo-all": "To-do editor — all projects",
-  "todo-service": "To-do editor — At Service only",
-  "viewer": "Viewer (read-only)"
-};
 const AT_SERVICE_INDEX = STAGES.length - 1;
+
+// Role list (ordered). Category-scoped to-do editor roles are generated from
+// CATEGORIES as "todo-cat-<Category>".
+const ROLE_LABELS = {};
+ROLE_LABELS["admin"] = "Admin (full access)";
+ROLE_LABELS["editor"] = "Editor (everything except delete)";
+ROLE_LABELS["todo-all"] = "To-do editor — all projects";
+ROLE_LABELS["todo-service"] = "To-do editor — At Service only";
+CATEGORIES.forEach(c => { ROLE_LABELS["todo-cat-" + c] = "To-do editor — " + c + " only"; });
+ROLE_LABELS["viewer"] = "Viewer (read-only)";
+
+// Actions the "editor" role may NOT perform (everything else is allowed).
+const EDITOR_DENIED = ["deleteProject", "import", "manageRoles", "clearActivity"];
 
 function currentRole() {
   // Local-only mode (no backend configured) = full access for the single user.
@@ -3276,28 +3288,45 @@ function currentRole() {
   if (!email) return "viewer";
   if (BOOTSTRAP_ADMINS.includes(email)) return "admin";
   const roles = state.roles || {};
-  return roles[email] || "viewer";
+  const r = roles[email];
+  return ROLE_LABELS[r] ? r : "viewer"; // unknown/invalid role -> viewer
 }
 function isAdmin() { return currentRole() === "admin"; }
-function isTodoEditor() { const r = currentRole(); return r === "todo-all" || r === "todo-service"; }
+function isTodoEditor() { return currentRole().indexOf("todo-") === 0; }
+// The category a "todo-cat-X" role is scoped to (or null).
+function roleCategory() {
+  const r = currentRole();
+  return r.indexOf("todo-cat-") === 0 ? r.slice("todo-cat-".length) : null;
+}
 // Which projects the current role is even allowed to see.
-// The "At Service only" to-do editor sees only At Service projects.
 function roleCanSee(project) {
-  if (currentRole() === "todo-service") return project.statusIndex === AT_SERVICE_INDEX;
+  const r = currentRole();
+  if (r === "todo-service") return project.statusIndex === AT_SERVICE_INDEX;
+  const cat = roleCategory();
+  if (cat) return project.category === cat;
   return true;
 }
 function canEditTodos(project) {
   const r = currentRole();
-  if (r === "admin" || r === "todo-all") return true;
+  if (r === "admin" || r === "editor" || r === "todo-all") return true;
   if (r === "todo-service") return !!project && project.statusIndex === AT_SERVICE_INDEX;
+  const cat = roleCategory();
+  if (cat) return !!project && project.category === cat;
   return false;
 }
 // Every mutating action routes through can(action, project).
-// Non-admins can ONLY edit to-dos (per configured roles); admins can do all.
 function can(action, project) {
-  if (currentRole() === "admin") return true;
+  const r = currentRole();
+  if (r === "admin") return true;
+  if (r === "editor") return EDITOR_DENIED.indexOf(action) === -1;
   if (action === "editTodos") return canEditTodos(project);
   return false;
+}
+// Display name for an email (admin-managed), falling back to the email prefix.
+function displayNameFor(email) {
+  if (!email) return "";
+  const dn = (state.displayNames || {})[email.toLowerCase()];
+  return (dn && dn.trim()) ? dn.trim() : email.split("@")[0];
 }
 function permissionDenied(msg) {
   showInfoToast("🔒 " + (msg || "You don't have permission to do that."));
@@ -3537,27 +3566,29 @@ function hideAuthOverlay() {
 function updateAuthUI(signedIn, session) {
   const email = signedIn && session && session.user ? session.user.email : "";
   currentUserEmail = email || null;
-  // Label used in the activity log: the part before "@", or "You" when local.
-  currentUserLabel = email ? email.split("@")[0] : "You";
+  // Label used in comments / activity: admin-set display name, else email prefix.
+  currentUserLabel = email ? displayNameFor(email) : "You";
   const btn = document.getElementById("signOutBtn");
   if (btn) {
     btn.style.display = signedIn ? "" : "none";
-    btn.title = email ? ("Signed in as " + email + " — sign out") : "Sign out";
+    btn.title = email ? ("Signed in as " + displayNameFor(email) + " (" + email + ") — sign out") : "Sign out";
   }
   applyRoleUI();
 }
 
 // Show/hide the admin-only static controls and reflect the current role.
 function applyRoleUI() {
-  const admin = isAdmin();
+  // Keep the current user's label fresh if their display name changed.
+  if (currentUserEmail) currentUserLabel = displayNameFor(currentUserEmail);
   const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? "" : "none"; };
-  show("addProjectBtn", admin);
-  show("selectModeBtn", admin);
-  show("importBtn", admin);
-  show("teamBtn", admin);
+  show("addProjectBtn", can("addProject"));
+  show("selectModeBtn", can("bulk"));
+  show("importBtn", can("import"));
+  show("teamBtn", can("manageRoles"));
   const rolePill = document.getElementById("rolePill");
   if (rolePill) {
-    rolePill.textContent = "● " + (ROLE_LABELS[currentRole()] || currentRole());
+    const who = currentUserEmail ? displayNameFor(currentUserEmail) + " · " : "";
+    rolePill.textContent = "● " + who + (ROLE_LABELS[currentRole()] || currentRole());
     rolePill.style.display = backendEnabled() ? "" : "none";
   }
 }
@@ -4384,7 +4415,7 @@ function renderCardsView(projects) {
       card.appendChild(cb);
     }
 
-    if (isAdmin()) {
+    if (can("trashProject")) {
       const delBtn = document.createElement("button");
       delBtn.className = "card-delete";
       delBtn.title = T("trashTitle");
@@ -4607,7 +4638,7 @@ function renderTableView(projects) {
     tr.appendChild(tdMap);
 
     const tdDelete = document.createElement("td");
-    if (isAdmin()) {
+    if (can("trashProject")) {
       if (proj.pile !== "hand") {
         const toHandBtn = document.createElement("button");
         toHandBtn.className = "table-delete";
@@ -4652,7 +4683,7 @@ function deleteProject(id) {
 }
 
 function trashCard(id) {
-  if (!can("deleteProject")) return permissionDenied("Only admins can remove projects.");
+  if (!can("trashProject")) return permissionDenied("You can't remove projects.");
   const proj = state.projects.find(p => p.id === id);
   if (!proj) return;
   if (proj.pile === "discard") {
@@ -4849,18 +4880,18 @@ function renderDetail() {
   }
   const delBtn = document.getElementById("detailDeleteBtn");
   delBtn.textContent = T("trashBtn");
-  delBtn.style.display = can("deleteProject") ? "" : "none";
+  delBtn.style.display = can("trashProject") ? "" : "none";
 
   detailTitle.value = proj.name;
   detailTitle.readOnly = !can("editProject", proj);
   applyBidi(detailTitle, proj.name);
   detailBody.innerHTML = "";
   detailBody.appendChild(renderStepper(proj));
-  if (isAdmin()) detailBody.appendChild(renderPileControl(proj));
+  if (can("editProject", proj)) detailBody.appendChild(renderPileControl(proj));
 
   const stack = document.createElement("div");
   stack.className = "detail-stack";
-  if (isAdmin()) stack.appendChild(renderAssignmentBox(proj));
+  if (can("editProject", proj)) stack.appendChild(renderAssignmentBox(proj));
   stack.appendChild(renderQuestLog(proj));
   stack.appendChild(renderProjectNotesBox(proj));
   stack.appendChild(renderMapBox(proj));
@@ -4872,7 +4903,7 @@ function renderDetail() {
 function renderCommentsBox(proj) {
   const box = document.createElement("div");
   box.className = "section-box";
-  const editable = isAdmin();
+  const editable = can("editComments");
   const h4 = document.createElement("h4");
   h4.textContent = "💬 Comments";
   box.appendChild(h4);
@@ -5129,7 +5160,7 @@ function buildNoteEntry(note, refresh, remove, editable) {
 function renderProjectNotesBox(proj) {
   const box = document.createElement("div");
   box.className = "section-box notes-box";
-  const editable = isAdmin();
+  const editable = can("editNotes");
   const h4 = document.createElement("h4");
   h4.textContent = "\u{1F4DC} Notes";
   box.appendChild(h4);
@@ -5488,7 +5519,7 @@ function renderMapBox(proj) {
     box.appendChild(placeholder);
   }
 
-  if (!isAdmin()) return box; // viewers/to-do editors: read-only map
+  if (!can("editProject", proj)) return box; // read-only map
 
   const controls = document.createElement("div");
   controls.className = "map-controls";
@@ -5627,7 +5658,7 @@ function renderMissionsPanel() {
 
   const body = document.createElement("div");
   body.className = "missions-body";
-  const editable = isAdmin();
+  const editable = can("editGeneral");
 
   if (editable) {
     const inputRow = document.createElement("div");
@@ -5829,10 +5860,43 @@ function renderActivityPanel() {
     empty.textContent = "No activity yet. Changes you and your team make will show up here.";
     body.appendChild(empty);
   } else {
+    const userFilter = state.ui.activityUserFilter || "all";
+
+    // "Filter by user" dropdown.
+    const users = [...new Set(state.activity.map(a => a.user || "Someone"))].sort((a, b) => a.localeCompare(b));
+    const filterRow = document.createElement("div");
+    filterRow.className = "item-input";
+    filterRow.style.marginBottom = "10px";
+    const sel = document.createElement("select");
+    sel.className = "status-filter";
+    sel.innerHTML = '<option value="all">Everyone</option>' +
+      users.map(u => `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join("");
+    sel.value = users.includes(userFilter) ? userFilter : "all";
+    sel.addEventListener("change", () => {
+      state.ui.activityUserFilter = sel.value;
+      saveState();
+      renderActivityPanel();
+    });
+    const lbl = document.createElement("span");
+    lbl.className = "stats-row-label";
+    lbl.style.alignSelf = "center";
+    lbl.textContent = "By user:";
+    filterRow.appendChild(lbl);
+    filterRow.appendChild(sel);
+    body.appendChild(filterRow);
+
+    const entries = state.activity.filter(a => userFilter === "all" || (a.user || "Someone") === userFilter);
+
     const list = document.createElement("div");
     list.className = "activity-list";
+    if (entries.length === 0) {
+      const none = document.createElement("div");
+      none.className = "missions-empty";
+      none.textContent = "No activity from " + userFilter + ".";
+      list.appendChild(none);
+    }
     // Newest first.
-    state.activity.slice().reverse().forEach(entry => {
+    entries.slice().reverse().forEach(entry => {
       const row = document.createElement("div");
       row.className = "activity-entry";
       const user = document.createElement("span");
@@ -5854,7 +5918,7 @@ function renderActivityPanel() {
     });
     body.appendChild(list);
 
-    if (isAdmin()) {
+    if (can("clearActivity")) {
       const clearRow = document.createElement("div");
       clearRow.className = "activity-clear";
       const clearBtn = document.createElement("button");
@@ -5909,7 +5973,7 @@ function renderNotesPanel() {
 
   const body = document.createElement("div");
   body.className = "missions-body";
-  const editable = isAdmin();
+  const editable = can("editGeneral");
 
   if (editable) {
     const inputRow = document.createElement("div");
@@ -6054,7 +6118,7 @@ function clearSelection() {
   updateBulkBar();
 }
 function setSelectMode(on) {
-  if (on && !isAdmin()) return permissionDenied("Only admins can bulk-edit.");
+  if (on && !can("bulk")) return permissionDenied("You can't bulk-edit.");
   selectMode = on;
   if (!on) selectedIds.clear();
   const btn = document.getElementById("selectModeBtn");
@@ -6148,7 +6212,7 @@ document.addEventListener("keydown", e => {
 /* ---------- Team & roles admin ---------- */
 const teamOverlay = document.getElementById("teamOverlay");
 function openTeam() {
-  if (!isAdmin()) return permissionDenied("Only admins can manage the team.");
+  if (!can("manageRoles")) return permissionDenied("Only admins can manage the team.");
   renderTeamModal();
   teamOverlay.classList.add("visible");
 }
@@ -6198,6 +6262,28 @@ function renderTeamModal() {
     }
     row.appendChild(em);
 
+    // Admin-editable display name.
+    const nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.placeholder = "Display name";
+    nameInput.value = (state.displayNames || {})[email] || "";
+    nameInput.style.width = "130px";
+    applyBidi(nameInput, nameInput.value);
+    function commitName() {
+      const v = nameInput.value.trim();
+      if (!state.displayNames) state.displayNames = {};
+      if (v === (state.displayNames[email] || "")) return;
+      if (v) state.displayNames[email] = v; else delete state.displayNames[email];
+      logActivity("set display name of " + email + " to " + (v || "(none)"));
+      saveState();
+      applyRoleUI();
+      renderAllForPermissions();
+    }
+    nameInput.addEventListener("change", commitName);
+    nameInput.addEventListener("blur", commitName);
+    nameInput.addEventListener("keydown", e => { if (e.key === "Enter") nameInput.blur(); });
+    row.appendChild(nameInput);
+
     row.appendChild(roleSelectEl(role, (newRole) => {
       state.roles[email] = newRole;
       logActivity("set role of " + email + " to " + ROLE_LABELS[newRole]);
@@ -6235,6 +6321,10 @@ function renderTeamModal() {
   emailInput.type = "email";
   emailInput.placeholder = "teammate@email.com";
   emailInput.dir = "ltr";
+  const nameInput = document.createElement("input");
+  nameInput.type = "text";
+  nameInput.placeholder = "Display name";
+  nameInput.style.width = "130px";
   const roleSel = roleSelectEl("viewer", () => {}, false);
   const addBtn = document.createElement("button");
   addBtn.className = "btn small-btn";
@@ -6243,9 +6333,11 @@ function renderTeamModal() {
     const email = emailInput.value.trim().toLowerCase();
     if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { emailInput.focus(); return; }
     state.roles[email] = roleSel.value;
+    const nm = nameInput.value.trim();
+    if (nm) { if (!state.displayNames) state.displayNames = {}; state.displayNames[email] = nm; }
     logActivity("added " + email + " as " + ROLE_LABELS[roleSel.value]);
     saveState();
-    emailInput.value = "";
+    emailInput.value = ""; nameInput.value = "";
     renderTeamModal();
     applyRoleUI();
     renderAllForPermissions();
@@ -6253,6 +6345,7 @@ function renderTeamModal() {
   addBtn.addEventListener("click", addMember);
   emailInput.addEventListener("keydown", e => { if (e.key === "Enter") addMember(); });
   add.appendChild(emailInput);
+  add.appendChild(nameInput);
   add.appendChild(roleSel);
   add.appendChild(addBtn);
   body.appendChild(add);
