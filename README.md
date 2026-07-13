@@ -94,8 +94,9 @@ the footer (admins only) and assign a role to each login email:
   is **At Service**. This role also *sees only* At Service projects.
 - **Viewer** — read-only.
 
-The **General To-Do's, General Notes and Project Statistics** panels are shown
-to admins only. Anyone not listed is a **Viewer**. The admin email(s) are set in `index.html`
+The **General To-Do's, General Notes and Project Statistics** panels are hidden
+from to-do editors (admins and viewers still see them). Anyone not listed is a
+**Viewer**. The admin email(s) are set in `index.html`
 via `BOOTSTRAP_ADMINS` (so you can't lock yourself out); the current owner is
 `razcohen7676@gmail.com`.
 

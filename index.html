@@ -3279,6 +3279,7 @@ function currentRole() {
   return roles[email] || "viewer";
 }
 function isAdmin() { return currentRole() === "admin"; }
+function isTodoEditor() { const r = currentRole(); return r === "todo-all" || r === "todo-service"; }
 // Which projects the current role is even allowed to see.
 // The "At Service only" to-do editor sees only At Service projects.
 function roleCanSee(project) {
@@ -5593,7 +5594,7 @@ function startInlineEdit(container, displayEl, currentText, onSave) {
 function renderMissionsPanel() {
   const panel = document.getElementById("missionsPanel");
   panel.innerHTML = "";
-  if (!isAdmin()) { panel.style.display = "none"; return; }
+  if (isTodoEditor()) { panel.style.display = "none"; return; }
   panel.style.display = "";
   appendCornerMarks(panel);
 
@@ -5680,7 +5681,7 @@ function renderMissionsPanel() {
 function renderStatsPanel() {
   const panel = document.getElementById("statsPanel");
   panel.innerHTML = "";
-  if (!isAdmin()) { panel.style.display = "none"; return; }
+  if (isTodoEditor()) { panel.style.display = "none"; return; }
   panel.style.display = "";
   appendCornerMarks(panel);
 
@@ -5876,7 +5877,7 @@ function renderActivityPanel() {
 function renderNotesPanel() {
   const panel = document.getElementById("notesPanel");
   panel.innerHTML = "";
-  if (!isAdmin()) { panel.style.display = "none"; return; }
+  if (isTodoEditor()) { panel.style.display = "none"; return; }
   panel.style.display = "";
   appendCornerMarks(panel);
 
