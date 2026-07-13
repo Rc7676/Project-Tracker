@@ -2247,6 +2247,162 @@
     display: flex;
     justify-content: flex-end;
   }
+
+  /* Clearer "click to edit" affordance */
+  .editable { position: relative; border-radius: 4px; }
+  .editable:hover { background: var(--row-hover); box-shadow: 0 0 0 4px var(--row-hover); }
+  .editable::after {
+    content: "✎";
+    font-size: 0.85em;
+    opacity: 0;
+    margin-left: 6px;
+    color: var(--muted);
+    transition: opacity 0.12s ease;
+  }
+  .editable:hover::after { opacity: 0.7; }
+
+  /* Card to-do progress bar */
+  .card-progress {
+    position: relative;
+    z-index: 3;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--border);
+    overflow: hidden;
+    margin-top: 10px;
+  }
+  .card-progress > span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #00b070, #00c875);
+    border-radius: 999px;
+    transition: width 0.3s ease;
+  }
+
+  /* Filter status bar above the grid */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 0 2px 14px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .filter-bar .filter-count { font-weight: 600; color: var(--text); }
+  .filter-bar .clear-filters {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .filter-bar .clear-filters:hover { background: var(--row-hover); }
+  .summary-overdue {
+    cursor: pointer;
+    color: #fff !important;
+    background: var(--danger);
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-weight: 700;
+  }
+
+  /* Mobile filter drawer header (accordion on small screens) */
+  .toolbar-mobile-header {
+    display: none;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 12px 16px;
+    background: transparent;
+    border: none;
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gold);
+    cursor: pointer;
+  }
+  .toolbar-mobile-header .chev { transition: transform 0.15s ease; }
+  .toolbar.filters-open .toolbar-mobile-header .chev { transform: rotate(180deg); }
+
+  /* Due-date quick picks */
+  .due-quick {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  .due-quick button {
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .due-quick button:hover { background: var(--row-hover); }
+
+  /* Bulk-select */
+  .card-select, .row-select {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 5;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
+  .project-card.selected { outline: 3px solid var(--accent); outline-offset: 2px; }
+  table.projects-table tr.selected { background: rgba(0,115,234,0.14) !important; }
+  .bulk-bar {
+    position: fixed;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 320;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    max-width: calc(100vw - 28px);
+    background: var(--card-bg);
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+    padding: 10px 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  }
+  .bulk-bar.visible { display: flex; }
+  .bulk-bar .bulk-count { font-weight: 700; font-size: 13.5px; color: var(--text); }
+  .bulk-bar select, .bulk-bar input {
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    font-size: 13px;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  /* Bigger tap targets for icon-only buttons on touch screens */
+  @media (max-width: 1050px) {
+    /* Stacked vertically, flex-basis would force a tall empty box. */
+    .toolbar, .hand-strip { flex: 0 0 auto !important; }
+    .toolbar-mobile-header { display: flex; }
+    .toolbar .toolbar-scroll { display: none; }
+    .toolbar.filters-open .toolbar-scroll { display: block; }
+    .project-card .card-delete, .project-card .card-to-hand,
+    .table-delete, .entry-delete, .note-delete, .quest-chevron {
+      min-width: 34px;
+      min-height: 34px;
+    }
+    .chip, .segmented button { min-height: 36px; }
+  }
 </style>
 <script>
   // Set theme + skin before first paint to avoid a flash of the wrong look.
@@ -2283,11 +2439,15 @@
   <div class="header-divider"><span></span></div>
 
   <div class="layout">
-    <div class="toolbar">
+    <div class="toolbar" id="toolbar">
       <span class="frame-corner tl"></span>
       <span class="frame-corner tr"></span>
       <span class="frame-corner bl"></span>
       <span class="frame-corner br"></span>
+
+      <button class="toolbar-mobile-header" id="toolbarMobileHeader" aria-expanded="false">
+        <span>🔍 Filters &amp; sort</span><span class="chev">▾</span>
+      </button>
 
       <div class="toolbar-scroll">
         <div class="toolbar-row">
@@ -2357,6 +2517,7 @@
           <button data-view="cards" class="active">▦ Cards</button>
           <button data-view="table">☰ Table</button>
         </div>
+        <button class="btn secondary" id="selectModeBtn" title="Select multiple projects">☑️ Select</button>
       </div>
 
       <div id="content"></div>
@@ -2396,7 +2557,7 @@
         <input type="text" id="detailTitle" class="title-input">
 
         <button class="modal-delete-btn" id="detailDeleteBtn">🗑️ Trash Card</button>
-        <button class="modal-close" id="detailCloseBtn">&times;</button>
+        <button class="modal-close" id="detailCloseBtn" aria-label="Close">&times;</button>
       </div>
       <div class="modal-tier-ribbon" id="detailTierRibbon"></div>
       <div class="modal-body" id="detailBody"></div>
@@ -2414,6 +2575,16 @@
     <div class="auth-error" id="authError"></div>
     <p class="auth-hint">Accounts are created by your workspace admin.</p>
   </div>
+</div>
+
+<div class="bulk-bar" id="bulkBar">
+  <span class="bulk-count" id="bulkCount">0 selected</span>
+  <select id="bulkStatus"><option value="">Set status…</option></select>
+  <select id="bulkPile"><option value="">Move to…</option></select>
+  <input type="text" id="bulkAssignee" placeholder="Assign to…" list="assigneeOptions" style="width:130px">
+  <button class="btn secondary small-btn" id="bulkAssignBtn">Assign</button>
+  <button class="btn secondary small-btn" id="bulkDeleteBtn">🗑️ Delete</button>
+  <button class="btn secondary small-btn" id="bulkClearBtn">Clear</button>
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
@@ -2484,7 +2655,11 @@ const TERMS = {
     discardEmpty: "\u{1F578}️ No discarded projects. Archive a finished project here from its detail view.",
     sentToDiscard: name => `"${name}" sent to Discard.`,
     trashBtn: "\u{1F5D1}️ Trash Card",
-    trashTitle: "Trash card"
+    trashTitle: "Trash card",
+    subAdd: "Add a sub-mission...",
+    missionsTitle: "⚔️ General Missions",
+    missionAdd: "Add a general mission...",
+    missionEmpty: "No general missions yet. Add one above."
   },
   normal: {
     todosLabel: "✅ To Do's",
@@ -2509,7 +2684,11 @@ const TERMS = {
     discardEmpty: "Nothing marked irrelevant yet. Mark a finished project here from its detail view.",
     sentToDiscard: name => `"${name}" marked Irrelevant.`,
     trashBtn: "\u{1F5D1}️ Delete",
-    trashTitle: "Delete"
+    trashTitle: "Delete",
+    subAdd: "Add a sub-task...",
+    missionsTitle: "✅ General To-Do's",
+    missionAdd: "Add a general to-do...",
+    missionEmpty: "No general to-do's yet. Add one above."
   }
 };
 function T(key) {
@@ -2690,6 +2869,7 @@ function migrateState(parsed) {
   if (parsed.ui.statsCollapsed === undefined) parsed.ui.statsCollapsed = true;
   if (parsed.ui.activityCollapsed === undefined) parsed.ui.activityCollapsed = true;
   if (typeof parsed.ui.assigneeFilter !== "string") parsed.ui.assigneeFilter = "all";
+  if (typeof parsed.ui.dueFilter !== "string") parsed.ui.dueFilter = "all";
   if (!Array.isArray(parsed.activity)) parsed.activity = [];
   if (!Array.isArray(parsed.filterPresets)) parsed.filterPresets = [];
   if (typeof parsed.generalNotes === "string") {
@@ -2737,6 +2917,7 @@ function loadState() {
           todoFilters: ["hasOpen", "none"],
           pileFilters: ["deck"],
           assigneeFilter: "all",
+          dueFilter: "all",
           sortBy: "default",
           searchQuery: "",
           theme: "light",
@@ -2766,6 +2947,7 @@ function loadState() {
       todoFilters: ["hasOpen", "none"],
       pileFilters: ["deck"],
       assigneeFilter: "all",
+      dueFilter: "all",
       sortBy: "default",
       searchQuery: "",
       theme: "light",
@@ -2787,6 +2969,8 @@ function loadState() {
 
 let state = loadState();
 let openDetailId = null;
+let selectMode = false;
+const selectedIds = new Set();
 const REDUCED_MOTION = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const RTL_PATTERN = new RegExp(
@@ -3170,6 +3354,11 @@ function getFilteredProjects() {
       if (assigneeFilter === "__unassigned__") { if (p.assignee) return false; }
       else if (p.assignee !== assigneeFilter) return false;
     }
+    if (state.ui.dueFilter && state.ui.dueFilter !== "all") {
+      const di = dueInfo(p.dueDate);
+      if (state.ui.dueFilter === "overdue" && (!di || di.state !== "overdue")) return false;
+      if (state.ui.dueFilter === "soon" && (!di || di.state === "normal")) return false;
+    }
     if (!passesMultiFilter(todoFilters, 2, () => {
       return (todoFilters.includes("hasOpen") && openTodos > 0) ||
              (todoFilters.includes("none") && p.todos.length === 0);
@@ -3420,9 +3609,25 @@ function resetFilters() {
   state.ui.searchQuery = "";
   state.ui.sortBy = "default";
   state.ui.assigneeFilter = "all";
+  state.ui.dueFilter = "all";
   saveState();
   renderToolbar();
   renderContent();
+}
+
+// Are any filters narrowing the list from the default view?
+function filtersActive() {
+  const u = state.ui;
+  return (u.searchQuery || "").trim() !== ""
+    || u.categoryFilters.length !== CATEGORIES.length
+    || u.statusFilters.length !== STAGES.length
+    || u.todoFilters.length !== 2
+    || !(u.pileFilters.length === 1 && u.pileFilters[0] === "deck")
+    || u.assigneeFilter !== "all"
+    || u.dueFilter !== "all";
+}
+function countOverdue() {
+  return state.projects.filter(p => p.pile !== "discard" && (dueInfo(p.dueDate) || {}).state === "overdue").length;
 }
 function confirmAdd() {
   const name = addNameInput.value.trim();
@@ -3456,6 +3661,20 @@ function renderSummary() {
     parts.push(`<span>${T("handInline")(handCount)}</span>`);
   }
   bar.innerHTML = parts.map(p => `<span>${p}</span>`).join("");
+
+  const overdue = countOverdue();
+  if (overdue > 0) {
+    const chip = document.createElement("span");
+    chip.className = "summary-overdue";
+    chip.textContent = "⚠ " + overdue + " overdue";
+    chip.title = state.ui.dueFilter === "overdue" ? "Show all" : "Show only overdue";
+    chip.addEventListener("click", () => {
+      state.ui.dueFilter = state.ui.dueFilter === "overdue" ? "all" : "overdue";
+      saveState();
+      renderContent();
+    });
+    bar.appendChild(chip);
+  }
 }
 
 function renderAll() {
@@ -3644,11 +3863,32 @@ function renderDiscardPile() {
   wrap.appendChild(body);
 }
 
+function renderFilterBar(shownCount) {
+  const bar = document.createElement("div");
+  bar.className = "filter-bar";
+  const total = state.projects.length;
+  const label = document.createElement("span");
+  label.innerHTML = filtersActive()
+    ? `Showing <span class="filter-count">${shownCount}</span> of ${total}`
+    : `<span class="filter-count">${total}</span> project${total === 1 ? "" : "s"}`;
+  bar.appendChild(label);
+  if (filtersActive()) {
+    const clear = document.createElement("button");
+    clear.className = "clear-filters";
+    clear.textContent = "✕ Clear all filters";
+    clear.addEventListener("click", resetFilters);
+    bar.appendChild(clear);
+  }
+  return bar;
+}
+
 function renderContent() {
   renderSummary();
   const content = document.getElementById("content");
   content.innerHTML = "";
   const projects = getFilteredProjects();
+
+  content.appendChild(renderFilterBar(projects.length));
 
   if (projects.length === 0) {
     const empty = document.createElement("div");
@@ -3734,7 +3974,10 @@ function renderCardsView(projects) {
     const glow = glowVars(proj.statusIndex);
     card.style.setProperty("--glow-blur", glow.blur);
     card.style.setProperty("--glow-color", glow.color);
-    card.addEventListener("click", () => openDetail(proj.id));
+    card.addEventListener("click", () => {
+      if (selectMode) toggleSelect(proj.id);
+      else openDetail(proj.id);
+    });
 
     ["tl", "tr", "bl", "br"].forEach(pos => {
       const corner = document.createElement("span");
@@ -3742,9 +3985,21 @@ function renderCardsView(projects) {
       card.appendChild(corner);
     });
 
+    if (selectMode) {
+      if (selectedIds.has(proj.id)) card.classList.add("selected");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.className = "card-select";
+      cb.checked = selectedIds.has(proj.id);
+      cb.setAttribute("aria-label", "Select " + proj.name);
+      cb.addEventListener("click", e => { e.stopPropagation(); toggleSelect(proj.id); });
+      card.appendChild(cb);
+    }
+
     const delBtn = document.createElement("button");
     delBtn.className = "card-delete";
     delBtn.title = T("trashTitle");
+    delBtn.setAttribute("aria-label", T("trashTitle"));
     delBtn.textContent = "✕";
     delBtn.addEventListener("click", e => { e.stopPropagation(); trashCard(proj.id); });
     card.appendChild(delBtn);
@@ -3753,6 +4008,7 @@ function renderCardsView(projects) {
       const toHandBtn = document.createElement("button");
       toHandBtn.className = "card-to-hand";
       toHandBtn.title = T("sendToHand");
+      toHandBtn.setAttribute("aria-label", T("sendToHand"));
       toHandBtn.textContent = "\u{1F590}\u{FE0F}";
       toHandBtn.addEventListener("click", e => { e.stopPropagation(); setPile(proj, "hand", e.currentTarget); });
       card.appendChild(toHandBtn);
@@ -3793,6 +4049,17 @@ function renderCardsView(projects) {
       ${proj.notes.length ? `<span class="rule-line">\u{1F4DC} ${proj.notes.length} note${proj.notes.length === 1 ? "" : "s"}</span>` : ""}
     `;
     card.appendChild(rules);
+
+    if (proj.todos.length > 0) {
+      const pct = Math.round(doneCount / proj.todos.length * 100);
+      const prog = document.createElement("div");
+      prog.className = "card-progress";
+      prog.title = doneCount + "/" + proj.todos.length + " " + T("todosWord") + " complete";
+      const fill = document.createElement("span");
+      fill.style.width = pct + "%";
+      prog.appendChild(fill);
+      card.appendChild(prog);
+    }
 
     if (proj.assignee || proj.dueDate) {
       const meta = document.createElement("div");
@@ -3869,6 +4136,7 @@ function renderTableView(projects) {
   table.innerHTML = `
     <thead>
       <tr>
+        ${selectMode ? "<th></th>" : ""}
         <th>Project</th>
         <th>Kind</th>
         <th>Status</th>
@@ -3886,8 +4154,23 @@ function renderTableView(projects) {
     const tr = document.createElement("tr");
     if (dataRowIndex % 2 === 1) tr.classList.add("row-alt");
     tr.classList.add("status-" + proj.statusIndex);
+    if (selectMode && selectedIds.has(proj.id)) tr.classList.add("selected");
     dataRowIndex++;
-    tr.addEventListener("click", () => openDetail(proj.id));
+    tr.addEventListener("click", () => {
+      if (selectMode) toggleSelect(proj.id);
+      else openDetail(proj.id);
+    });
+
+    if (selectMode) {
+      const tdSel = document.createElement("td");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = selectedIds.has(proj.id);
+      cb.setAttribute("aria-label", "Select " + proj.name);
+      cb.addEventListener("click", e => { e.stopPropagation(); toggleSelect(proj.id); });
+      tdSel.appendChild(cb);
+      tr.appendChild(tdSel);
+    }
 
     const tier = getCardTier(proj);
     const tdName = document.createElement("td");
@@ -3937,6 +4220,7 @@ function renderTableView(projects) {
       const toHandBtn = document.createElement("button");
       toHandBtn.className = "table-delete";
       toHandBtn.title = T("sendToHand");
+      toHandBtn.setAttribute("aria-label", T("sendToHand"));
       toHandBtn.textContent = "\u{1F590}\u{FE0F}";
       toHandBtn.addEventListener("click", e => { e.stopPropagation(); setPile(proj, "hand", e.currentTarget); });
       tdDelete.appendChild(toHandBtn);
@@ -3944,6 +4228,7 @@ function renderTableView(projects) {
     const delBtn = document.createElement("button");
     delBtn.className = "table-delete";
     delBtn.title = T("trashTitle");
+    delBtn.setAttribute("aria-label", T("trashTitle"));
     delBtn.textContent = "✕";
     delBtn.addEventListener("click", e => { e.stopPropagation(); trashCard(proj.id); });
     tdDelete.appendChild(delBtn);
@@ -4235,15 +4520,40 @@ function renderAssignmentBox(proj) {
   const dInput = document.createElement("input");
   dInput.type = "date";
   dInput.value = proj.dueDate || "";
-  dInput.addEventListener("change", () => {
-    const v = dInput.value || "";
+  function setDue(v) {
     if (v === (proj.dueDate || "")) return;
     proj.dueDate = v;
     logActivity(v ? ('set due date for "' + proj.name + '" to ' + v) : ('cleared due date for "' + proj.name + '"'));
     persistAndRefresh();
-  });
+  }
+  dInput.addEventListener("change", () => setDue(dInput.value || ""));
   dField.appendChild(dLabel);
   dField.appendChild(dInput);
+
+  // Quick-pick buttons
+  const quick = document.createElement("div");
+  quick.className = "due-quick";
+  function plusDays(n) {
+    const d = new Date();
+    d.setDate(d.getDate() + n);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  [["Today", 0], ["+1 wk", 7], ["+1 mo", 30]].forEach(([label, days]) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = label;
+    btn.addEventListener("click", () => setDue(plusDays(days)));
+    quick.appendChild(btn);
+  });
+  if (proj.dueDate) {
+    const clr = document.createElement("button");
+    clr.type = "button";
+    clr.textContent = "Clear";
+    clr.addEventListener("click", () => setDue(""));
+    quick.appendChild(clr);
+  }
+  dField.appendChild(quick);
+
   grid.appendChild(dField);
 
   box.appendChild(grid);
@@ -4326,6 +4636,7 @@ function buildNoteEntry(note, refresh, remove) {
   const delBtn = document.createElement("button");
   delBtn.className = "note-delete";
   delBtn.title = "Delete note";
+  delBtn.setAttribute("aria-label", "Delete note");
   delBtn.textContent = "✕";
   delBtn.addEventListener("click", remove);
   entry.appendChild(delBtn);
@@ -4507,6 +4818,7 @@ function renderQuestCard(proj, quest, idx) {
   const del = document.createElement("button");
   del.className = "entry-delete";
   del.title = "Delete quest";
+  del.setAttribute("aria-label", "Delete quest");
   del.textContent = "✕";
   del.addEventListener("click", () => { proj.todos.splice(idx, 1); persistAndRefresh(); });
   head.appendChild(del);
@@ -4563,7 +4875,7 @@ function renderQuestCard(proj, quest, idx) {
   subInputRow.className = "item-input quest-sub-input";
   const subInput = document.createElement("input");
   subInput.type = "text";
-  subInput.placeholder = "Add a sub-mission...";
+  subInput.placeholder = T("subAdd");
   subInput.dir = "auto";
   const subAdd = document.createElement("button");
   subAdd.className = "btn secondary small-btn";
@@ -4664,6 +4976,7 @@ function createEntryItem(item, accentVar, onToggle, onDelete, onEdit) {
   const delBtn = document.createElement("button");
   delBtn.className = "entry-delete";
   delBtn.title = "Delete";
+  delBtn.setAttribute("aria-label", "Delete");
   delBtn.textContent = "✕";
   delBtn.addEventListener("click", onDelete);
   li.appendChild(delBtn);
@@ -4715,7 +5028,7 @@ function renderMissionsPanel() {
   header.appendChild(chevron);
 
   const title = document.createElement("h2");
-  title.textContent = "⚔️ General Missions";
+  title.textContent = T("missionsTitle");
   header.appendChild(title);
 
   const openCount = state.globalMissions.filter(m => !m.done).length;
@@ -4740,7 +5053,7 @@ function renderMissionsPanel() {
   inputRow.className = "item-input";
   const input = document.createElement("input");
   input.type = "text";
-  input.placeholder = "Add a general mission...";
+  input.placeholder = T("missionAdd");
   input.dir = "auto";
   const addBtn = document.createElement("button");
   addBtn.className = "btn small-btn";
@@ -4762,7 +5075,7 @@ function renderMissionsPanel() {
   if (state.globalMissions.length === 0) {
     const empty = document.createElement("div");
     empty.className = "missions-empty";
-    empty.textContent = "No general missions yet. Add one above.";
+    empty.textContent = T("missionEmpty");
     body.appendChild(empty);
   } else {
     const list = document.createElement("ul");
@@ -5135,6 +5448,109 @@ renderMissionsPanel();
 renderNotesPanel();
 renderActivityPanel();
 renderAll();
+
+/* ---------- Bulk select ---------- */
+function toggleSelect(id) {
+  if (selectedIds.has(id)) selectedIds.delete(id);
+  else selectedIds.add(id);
+  renderContent();
+  updateBulkBar();
+}
+function clearSelection() {
+  selectedIds.clear();
+  renderContent();
+  updateBulkBar();
+}
+function setSelectMode(on) {
+  selectMode = on;
+  if (!on) selectedIds.clear();
+  const btn = document.getElementById("selectModeBtn");
+  btn.classList.toggle("active", on);
+  btn.textContent = on ? "✕ Done" : "☑️ Select";
+  if (on) {
+    // Populate the bulk-action dropdowns (skin-aware labels).
+    const st = document.getElementById("bulkStatus");
+    st.innerHTML = '<option value="">Set status…</option>' +
+      STAGES.map((s, i) => `<option value="${i}">${s.name}</option>`).join("");
+    const pl = document.getElementById("bulkPile");
+    pl.innerHTML = '<option value="">Move to…</option>' +
+      pileOptionsForSkin().map(o => `<option value="${o.value}">${escapeHtml(o.label)}</option>`).join("");
+  }
+  renderContent();
+  updateBulkBar();
+}
+function updateBulkBar() {
+  const bar = document.getElementById("bulkBar");
+  bar.classList.toggle("visible", selectMode && selectedIds.size > 0);
+  document.getElementById("bulkCount").textContent = selectedIds.size + " selected";
+}
+function selectedProjects() {
+  return state.projects.filter(p => selectedIds.has(p.id));
+}
+function bulkApplyStatus(i) {
+  const list = selectedProjects();
+  list.forEach(p => { p.statusIndex = i; });
+  logActivity("set " + list.length + " project" + (list.length === 1 ? "" : "s") + " to " + STAGES[i].name);
+  saveState();
+  clearSelection();
+  renderAll();
+}
+function bulkApplyPile(pile) {
+  const list = selectedProjects();
+  list.forEach(p => { p.pile = pile; });
+  logActivity("moved " + list.length + " project" + (list.length === 1 ? "" : "s") + " to " + pileLabel(pile).replace(/^\S+\s/, ""));
+  saveState();
+  clearSelection();
+  renderAll();
+}
+function bulkAssign(name) {
+  const list = selectedProjects();
+  list.forEach(p => { p.assignee = name; });
+  logActivity((name ? ("assigned " + list.length + " project" + (list.length === 1 ? "" : "s") + " to " + name)
+                    : ("unassigned " + list.length + " project" + (list.length === 1 ? "" : "s"))));
+  saveState();
+  clearSelection();
+  renderToolbar();
+  renderAll();
+}
+function bulkDelete() {
+  const list = selectedProjects();
+  if (list.length === 0) return;
+  if (!confirm("Move " + list.length + " project" + (list.length === 1 ? "" : "s") + " to " + (isFantasy() ? "Discard" : "Irrelevant") + "?")) return;
+  list.forEach(p => { p.pile = "discard"; });
+  logActivity("moved " + list.length + " project" + (list.length === 1 ? "" : "s") + " to " + (isFantasy() ? "Discard" : "Irrelevant"));
+  saveState();
+  clearSelection();
+  renderAll();
+}
+
+document.getElementById("selectModeBtn").addEventListener("click", () => setSelectMode(!selectMode));
+document.getElementById("bulkClearBtn").addEventListener("click", () => setSelectMode(false));
+document.getElementById("bulkStatus").addEventListener("change", e => { if (e.target.value !== "") bulkApplyStatus(parseInt(e.target.value, 10)); e.target.value = ""; });
+document.getElementById("bulkPile").addEventListener("change", e => { if (e.target.value) bulkApplyPile(e.target.value); e.target.value = ""; });
+document.getElementById("bulkAssignBtn").addEventListener("click", () => { bulkAssign(document.getElementById("bulkAssignee").value.trim()); document.getElementById("bulkAssignee").value = ""; });
+document.getElementById("bulkDeleteBtn").addEventListener("click", bulkDelete);
+
+/* ---------- Mobile filter drawer ---------- */
+document.getElementById("toolbarMobileHeader").addEventListener("click", () => {
+  const tb = document.getElementById("toolbar");
+  const open = tb.classList.toggle("filters-open");
+  document.getElementById("toolbarMobileHeader").setAttribute("aria-expanded", open ? "true" : "false");
+});
+
+/* ---------- Keyboard shortcuts ---------- */
+document.addEventListener("keydown", e => {
+  const t = e.target;
+  const typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
+  if (e.key === "Escape") {
+    if (selectMode && !detailOverlay.classList.contains("visible")) { setSelectMode(false); return; }
+  }
+  if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (detailOverlay.classList.contains("visible")) return;
+  if (e.key === "/") { e.preventDefault(); document.getElementById("searchInput").focus(); }
+  else if (e.key === "n" || e.key === "N") { e.preventDefault(); openAddBar(); }
+  else if (e.key === "s" || e.key === "S") { e.preventDefault(); setSelectMode(!selectMode); }
+});
 
 // Login gate wiring.
 document.getElementById("authSignInBtn").addEventListener("click", doSignIn);

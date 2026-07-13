@@ -114,6 +114,16 @@ plain in-memory `state` object and calls `saveState()`.
 
 ---
 
+## Tips
+
+- **Keyboard shortcuts:** `/` focuses search, `n` starts a new project, `s`
+  toggles multi-select, `Esc` closes a dialog / exits select mode.
+- **Bulk edits:** click **☑️ Select**, tick several projects, then set their
+  status, assignee, or move/irrelevant them all at once.
+- **Filters:** on phones the filters collapse behind a **🔍 Filters & sort**
+  bar. A "Showing X of Y · Clear all filters" line appears whenever a filter is
+  active. Overdue items surface as a red chip you can click to filter.
+
 ## Local development
 
 It's a static file — just open `index.html` in a browser. No install, no build.
