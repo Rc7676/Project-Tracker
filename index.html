@@ -3279,6 +3279,12 @@ function currentRole() {
   return roles[email] || "viewer";
 }
 function isAdmin() { return currentRole() === "admin"; }
+// Which projects the current role is even allowed to see.
+// The "At Service only" to-do editor sees only At Service projects.
+function roleCanSee(project) {
+  if (currentRole() === "todo-service") return project.statusIndex === AT_SERVICE_INDEX;
+  return true;
+}
 function canEditTodos(project) {
   const r = currentRole();
   if (r === "admin" || r === "todo-all") return true;
@@ -3611,6 +3617,7 @@ function getFilteredProjects() {
   const { categoryFilters, statusFilters, todoFilters, pileFilters, sortBy, searchQuery, assigneeFilter } = state.ui;
   const query = (searchQuery || "").trim().toLowerCase();
   let result = state.projects.filter(p => {
+    if (!roleCanSee(p)) return false;
     const openTodos = p.todos.filter(t => !t.done).length;
     if (!passesMultiFilter(categoryFilters, CATEGORIES.length, () => categoryFilters.includes(p.category))) return false;
     if (!passesMultiFilter(statusFilters, STAGES.length, () => statusFilters.includes(p.statusIndex))) return false;
@@ -3895,7 +3902,7 @@ function filtersActive() {
     || u.dueFilter !== "all";
 }
 function countOverdue() {
-  return state.projects.filter(p => p.pile !== "discard" && (dueInfo(projectDueDate(p)) || {}).state === "overdue").length;
+  return state.projects.filter(p => roleCanSee(p) && p.pile !== "discard" && (dueInfo(projectDueDate(p)) || {}).state === "overdue").length;
 }
 function confirmAdd() {
   if (!can("addProject")) return permissionDenied("Only admins can add projects.");
@@ -3917,15 +3924,16 @@ addNameInput.addEventListener("keydown", e => { if (e.key === "Enter") confirmAd
 
 function renderSummary() {
   const bar = document.getElementById("summaryBar");
-  const total = state.projects.length;
+  const visible = state.projects.filter(roleCanSee);
+  const total = visible.length;
   const parts = [`<strong>${total}</strong> project${total === 1 ? "" : "s"}`];
   CATEGORIES.forEach(cat => {
-    const count = state.projects.filter(p => p.category === cat).length;
+    const count = visible.filter(p => p.category === cat).length;
     if (count > 0) {
       parts.push(`<span><span class="summary-dot" style="background:${CATEGORY_META[cat]}"></span>${cat} ${count}</span>`);
     }
   });
-  const handCount = state.projects.filter(p => p.pile === "hand").length;
+  const handCount = visible.filter(p => p.pile === "hand").length;
   if (handCount > 0) {
     parts.push(`<span>${T("handInline")(handCount)}</span>`);
   }
@@ -4014,7 +4022,7 @@ function renderHandStrip() {
   const title = document.createElement("h2");
   title.textContent = T("handTitle");
   header.appendChild(title);
-  const handProjects = state.projects.filter(p => p.pile === "hand");
+  const handProjects = state.projects.filter(p => p.pile === "hand" && roleCanSee(p));
   const count = document.createElement("span");
   count.className = "hand-strip-count";
   count.textContent = handProjects.length + "/" + HAND_LIMIT;
@@ -4071,7 +4079,7 @@ function renderHandStrip() {
 function renderDiscardPile() {
   const wrap = document.getElementById("discardPile");
   wrap.innerHTML = "";
-  const discarded = state.projects.filter(p => p.pile === "discard");
+  const discarded = state.projects.filter(p => p.pile === "discard" && roleCanSee(p));
 
   const header = document.createElement("div");
   header.className = "discard-header";
@@ -4136,7 +4144,7 @@ function renderDiscardPile() {
 function renderFilterBar(shownCount) {
   const bar = document.createElement("div");
   bar.className = "filter-bar";
-  const total = state.projects.length;
+  const total = state.projects.filter(roleCanSee).length;
   const label = document.createElement("span");
   label.innerHTML = filtersActive()
     ? `Showing <span class="filter-count">${shownCount}</span> of ${total}`
@@ -5585,6 +5593,8 @@ function startInlineEdit(container, displayEl, currentText, onSave) {
 function renderMissionsPanel() {
   const panel = document.getElementById("missionsPanel");
   panel.innerHTML = "";
+  if (!isAdmin()) { panel.style.display = "none"; return; }
+  panel.style.display = "";
   appendCornerMarks(panel);
 
   const header = document.createElement("div");
@@ -5670,6 +5680,8 @@ function renderMissionsPanel() {
 function renderStatsPanel() {
   const panel = document.getElementById("statsPanel");
   panel.innerHTML = "";
+  if (!isAdmin()) { panel.style.display = "none"; return; }
+  panel.style.display = "";
   appendCornerMarks(panel);
 
   const header = document.createElement("div");
@@ -5864,6 +5876,8 @@ function renderActivityPanel() {
 function renderNotesPanel() {
   const panel = document.getElementById("notesPanel");
   panel.innerHTML = "";
+  if (!isAdmin()) { panel.style.display = "none"; return; }
+  panel.style.display = "";
   appendCornerMarks(panel);
 
   const header = document.createElement("div");
