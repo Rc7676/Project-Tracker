@@ -2389,8 +2389,127 @@
     color: var(--text);
   }
 
+  /* ---- Kanban board view ---- */
+  .kanban-board {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    padding-bottom: 12px;
+    align-items: flex-start;
+  }
+  .kanban-col {
+    flex: 0 0 300px;
+    width: 300px;
+    background: var(--panel-parch);
+    border: 1px solid var(--parch-edge);
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    max-height: 74vh;
+  }
+  html[data-skin="normal"] .kanban-col { background: var(--card-bg); border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .kanban-col-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border-bottom: 2px solid var(--kanban-color, var(--gold));
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 13.5px;
+    position: sticky;
+    top: 0;
+  }
+  .kanban-col-header .kanban-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--kanban-color); flex: 0 0 auto; }
+  .kanban-col-header .kanban-col-count {
+    margin-left: auto;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--muted);
+    background: var(--bg);
+    padding: 2px 9px;
+    border-radius: 999px;
+  }
+  .kanban-col-body {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 60px;
+  }
+  .kanban-col.drag-over .kanban-col-body { outline: 2px dashed var(--accent); outline-offset: -6px; border-radius: 8px; }
+  .kanban-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--cat-color, var(--accent));
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: grab;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: box-shadow 0.12s ease, transform 0.12s ease;
+  }
+  .kanban-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.16); transform: translateY(-1px); }
+  .kanban-card.dragging { opacity: 0.5; }
+  .kanban-card-name { font-weight: 700; font-size: 14px; color: var(--text); margin-bottom: 8px; word-break: break-word; }
+  .kanban-card-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .kanban-card-row + .kanban-card-row { margin-top: 8px; }
+  .kanban-empty { color: var(--muted); font-size: 12.5px; text-align: center; padding: 14px 4px; font-style: italic; }
+
+  /* ---- Per-to-do assignee + due date ---- */
+  .quest-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 9px 0 0 26px;
+  }
+  .quest-meta input[type="text"] {
+    width: 120px;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    background: var(--card-bg);
+    color: var(--text);
+  }
+  .quest-meta input[type="date"] {
+    padding: 3px 6px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    background: var(--card-bg);
+    color: var(--text);
+  }
+  .quest-head-badges { display: inline-flex; gap: 5px; align-items: center; flex: 0 0 auto; }
+
+  /* ---- Comments ---- */
+  .comment-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+  .comment {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 11px;
+  }
+  .comment-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 3px; }
+  .comment-user { font-weight: 700; font-size: 12.5px; color: var(--accent); }
+  .comment-time { font-size: 11px; color: var(--muted); }
+  .comment-body { font-size: 13.5px; color: var(--text); white-space: pre-wrap; word-break: break-word; }
+  .comment-delete { margin-left: auto; background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 12px; }
+  .comment-delete:hover { color: var(--danger); }
+
+  /* ---- Per-project history ---- */
+  .history-list { display: flex; flex-direction: column; gap: 2px; max-height: 220px; overflow-y: auto; }
+  .history-entry { display: flex; gap: 8px; align-items: baseline; padding: 6px 2px; border-bottom: 1px dashed var(--border); font-size: 12.5px; }
+  .history-entry:last-child { border-bottom: none; }
+  .history-entry .history-user { font-weight: 700; color: var(--accent); flex: 0 0 auto; }
+  .history-entry .history-text { flex: 1; color: var(--text); }
+  .history-entry .history-time { flex: 0 0 auto; font-size: 11px; color: var(--muted); }
+
   /* Bigger tap targets for icon-only buttons on touch screens */
   @media (max-width: 1050px) {
+    .kanban-col { flex-basis: 82vw; width: 82vw; }
     /* Stacked vertically, flex-basis would force a tall empty box. */
     .toolbar, .hand-strip { flex: 0 0 auto !important; }
     .toolbar-mobile-header { display: flex; }
@@ -2516,6 +2635,7 @@
         <div class="segmented" id="viewToggle">
           <button data-view="cards" class="active">▦ Cards</button>
           <button data-view="table">☰ Table</button>
+          <button data-view="kanban">🗂 Kanban</button>
         </div>
         <button class="btn secondary" id="selectModeBtn" title="Select multiple projects">☑️ Select</button>
       </div>
@@ -2811,15 +2931,21 @@ function migrateState(parsed) {
       p.notes = [];
     }
 
-    // Assignee + due date (added later).
+    // Assignee (project-level). Project due date was removed in favour of
+    // per-to-do due dates, but keep the field around for old backups.
     if (typeof p.assignee !== "string") p.assignee = "";
     if (typeof p.dueDate !== "string") p.dueDate = "";
+
+    // Per-project comment thread.
+    if (!Array.isArray(p.comments)) p.comments = [];
 
     // Quests (stored as `todos`): ensure new fields (description + sub-missions)
     if (!Array.isArray(p.todos)) p.todos = [];
     p.todos.forEach(t => {
       if (typeof t.description !== "string") t.description = "";
       if (!Array.isArray(t.subs)) t.subs = [];
+      if (typeof t.assignee !== "string") t.assignee = "";
+      if (typeof t.dueDate !== "string") t.dueDate = "";
     });
 
     // Perils removed: fold any existing perils into notes, then drop the field.
@@ -3069,10 +3195,10 @@ function rerenderAllData() {
 const ACTIVITY_LIMIT = 300;
 let currentUserLabel = "You";
 
-function logActivity(text) {
+function logActivity(text, projectId) {
   if (applyingRemote) return; // don't log changes we received from someone else
   if (!Array.isArray(state.activity)) state.activity = [];
-  state.activity.push({ ts: Date.now(), user: currentUserLabel, text });
+  state.activity.push({ ts: Date.now(), user: currentUserLabel, text, projectId: projectId || null });
   if (state.activity.length > ACTIVITY_LIMIT) {
     state.activity = state.activity.slice(-ACTIVITY_LIMIT);
   }
@@ -3099,8 +3225,17 @@ function escapeHtml(s) {
 }
 function knownAssignees() {
   const set = new Set();
-  state.projects.forEach(p => { if (p.assignee) set.add(p.assignee); });
+  state.projects.forEach(p => {
+    if (p.assignee) set.add(p.assignee);
+    (p.todos || []).forEach(t => { if (t.assignee) set.add(t.assignee); });
+  });
   return [...set].sort((a, b) => a.localeCompare(b));
+}
+// A project's effective due date = the soonest due date among its OPEN to-dos.
+function projectDueDate(proj) {
+  const dues = (proj.todos || []).filter(t => !t.done && t.dueDate).map(t => t.dueDate);
+  if (dues.length === 0) return "";
+  return dues.sort()[0];
 }
 function assigneeInitials(name) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -3328,6 +3463,7 @@ function newProject(name, category) {
     mapImage: null,
     notes: [],
     todos: [],
+    comments: [],
     pile: "deck",
     assignee: "",
     dueDate: ""
@@ -3355,7 +3491,7 @@ function getFilteredProjects() {
       else if (p.assignee !== assigneeFilter) return false;
     }
     if (state.ui.dueFilter && state.ui.dueFilter !== "all") {
-      const di = dueInfo(p.dueDate);
+      const di = dueInfo(projectDueDate(p));
       if (state.ui.dueFilter === "overdue" && (!di || di.state !== "overdue")) return false;
       if (state.ui.dueFilter === "soon" && (!di || di.state === "normal")) return false;
     }
@@ -3394,12 +3530,13 @@ function getFilteredProjects() {
       result.sort((a, b) => (b.todos.filter(t => !t.done).length) - (a.todos.filter(t => !t.done).length));
       break;
     case "due-asc":
-      // Soonest due date first; projects with no due date go last.
+      // Soonest due date first (from open to-dos); projects with none go last.
       result.sort((a, b) => {
-        if (!a.dueDate && !b.dueDate) return collator.compare(a.name, b.name);
-        if (!a.dueDate) return 1;
-        if (!b.dueDate) return -1;
-        return a.dueDate.localeCompare(b.dueDate);
+        const ad = projectDueDate(a), bd = projectDueDate(b);
+        if (!ad && !bd) return collator.compare(a.name, b.name);
+        if (!ad) return 1;
+        if (!bd) return -1;
+        return ad.localeCompare(bd);
       });
       break;
     default:
@@ -3627,14 +3764,14 @@ function filtersActive() {
     || u.dueFilter !== "all";
 }
 function countOverdue() {
-  return state.projects.filter(p => p.pile !== "discard" && (dueInfo(p.dueDate) || {}).state === "overdue").length;
+  return state.projects.filter(p => p.pile !== "discard" && (dueInfo(projectDueDate(p)) || {}).state === "overdue").length;
 }
 function confirmAdd() {
   const name = addNameInput.value.trim();
   if (!name) return;
   const proj = newProject(name, addCategorySelect.value);
   state.projects.push(proj);
-  logActivity('added project "' + name + '"');
+  logActivity('added project "' + name + '"', proj.id);
   saveState();
   addBar.classList.remove("visible");
   renderToolbar();
@@ -3848,7 +3985,7 @@ function renderDiscardPile() {
       const restoreBtn = document.createElement("button");
       restoreBtn.className = "btn secondary small-btn";
       restoreBtn.textContent = "↩ Restore";
-      restoreBtn.addEventListener("click", () => { logActivity('restored "' + proj.name + '"'); setPile(proj, "deck"); });
+      restoreBtn.addEventListener("click", () => { logActivity('restored "' + proj.name + '"', proj.id); setPile(proj, "deck"); });
       row.appendChild(restoreBtn);
 
       const delBtn = document.createElement("button");
@@ -3922,9 +4059,113 @@ function renderContent() {
 
   if (state.ui.view === "cards") {
     content.appendChild(renderCardsView(projects));
+  } else if (state.ui.view === "kanban") {
+    content.appendChild(renderKanbanView(projects));
   } else {
     content.appendChild(renderTableView(projects));
   }
+}
+
+/* Kanban board: one column per stage, drag cards between columns. */
+let kanbanDragId = null;
+function renderKanbanView(projects) {
+  const board = document.createElement("div");
+  board.className = "kanban-board";
+
+  STAGES.forEach((stage, i) => {
+    const col = document.createElement("div");
+    col.className = "kanban-col";
+    col.style.setProperty("--kanban-color", stage.color);
+
+    const header = document.createElement("div");
+    header.className = "kanban-col-header";
+    const dot = document.createElement("span");
+    dot.className = "kanban-dot";
+    header.appendChild(dot);
+    const label = document.createElement("span");
+    label.textContent = stage.name;
+    header.appendChild(label);
+    const colProjects = projects.filter(p => p.statusIndex === i);
+    const count = document.createElement("span");
+    count.className = "kanban-col-count";
+    count.textContent = colProjects.length;
+    header.appendChild(count);
+    col.appendChild(header);
+
+    const body = document.createElement("div");
+    body.className = "kanban-col-body";
+
+    if (colProjects.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "kanban-empty";
+      empty.textContent = "Drop here";
+      body.appendChild(empty);
+    }
+    colProjects.forEach(proj => body.appendChild(renderKanbanCard(proj)));
+
+    // Drag & drop onto this column changes status.
+    col.addEventListener("dragover", e => { e.preventDefault(); col.classList.add("drag-over"); });
+    col.addEventListener("dragleave", () => col.classList.remove("drag-over"));
+    col.addEventListener("drop", e => {
+      e.preventDefault();
+      col.classList.remove("drag-over");
+      const proj = state.projects.find(p => p.id === kanbanDragId);
+      if (!proj || proj.statusIndex === i) return;
+      proj.statusIndex = i;
+      logActivity('set "' + proj.name + '" to ' + stage.name, proj.id);
+      saveState();
+      renderAll();
+    });
+
+    col.appendChild(body);
+    board.appendChild(col);
+  });
+
+  return board;
+}
+
+function renderKanbanCard(proj) {
+  const card = document.createElement("div");
+  card.className = "kanban-card";
+  card.draggable = true;
+  card.style.setProperty("--cat-color", CATEGORY_META[proj.category]);
+
+  card.addEventListener("dragstart", e => {
+    kanbanDragId = proj.id;
+    card.classList.add("dragging");
+    if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
+  });
+  card.addEventListener("dragend", () => { kanbanDragId = null; card.classList.remove("dragging"); });
+  card.addEventListener("click", () => openDetail(proj.id));
+
+  const name = document.createElement("div");
+  name.className = "kanban-card-name";
+  name.textContent = proj.name;
+  applyBidi(name, proj.name);
+  card.appendChild(name);
+
+  const row1 = document.createElement("div");
+  row1.className = "kanban-card-row";
+  row1.appendChild(categoryTagEl(proj.category));
+  const doneCount = proj.todos.filter(t => t.done).length;
+  const todoTag = document.createElement("span");
+  todoTag.className = "assignee-unassigned";
+  todoTag.textContent = "✅ " + doneCount + "/" + proj.todos.length;
+  row1.appendChild(todoTag);
+  card.appendChild(row1);
+
+  const projDue = projectDueDate(proj);
+  if (proj.assignee || projDue) {
+    const row2 = document.createElement("div");
+    row2.className = "kanban-card-row";
+    if (proj.assignee) row2.appendChild(assigneeChipEl(proj.assignee));
+    else { const sp = document.createElement("span"); sp.className = "assignee-unassigned"; sp.textContent = "Unassigned"; row2.appendChild(sp); }
+    const due = dueBadgeEl(projDue);
+    if (due) row2.appendChild(due);
+    card.appendChild(row2);
+  }
+
+  return card;
 }
 
 const RANK_GLYPHS = ["○", "◔", "◑", "◕", "●"];
@@ -4061,12 +4302,13 @@ function renderCardsView(projects) {
       card.appendChild(prog);
     }
 
-    if (proj.assignee || proj.dueDate) {
+    const projDue = projectDueDate(proj);
+    if (proj.assignee || projDue) {
       const meta = document.createElement("div");
       meta.className = "card-meta";
       if (proj.assignee) meta.appendChild(assigneeChipEl(proj.assignee));
       else { const sp = document.createElement("span"); sp.className = "assignee-unassigned"; sp.textContent = "Unassigned"; meta.appendChild(sp); }
-      const due = dueBadgeEl(proj.dueDate);
+      const due = dueBadgeEl(projDue);
       if (due) meta.appendChild(due);
       card.appendChild(meta);
     }
@@ -4201,7 +4443,7 @@ function renderTableView(projects) {
     tr.appendChild(tdAssignee);
 
     const tdDue = document.createElement("td");
-    const dueEl = dueBadgeEl(proj.dueDate);
+    const dueEl = dueBadgeEl(projectDueDate(proj));
     if (dueEl) tdDue.appendChild(dueEl);
     else tdDue.textContent = "—";
     tr.appendChild(tdDue);
@@ -4246,7 +4488,7 @@ function deleteProject(id) {
   if (!proj) return;
   if (confirm(`Permanently trash "${proj.name}"? This cannot be undone.`)) {
     state.projects = state.projects.filter(p => p.id !== id);
-    logActivity('permanently deleted "' + proj.name + '"');
+    logActivity('permanently deleted "' + proj.name + '"', id);
     saveState();
     renderToolbar();
     if (openDetailId === id) {
@@ -4267,7 +4509,7 @@ function trashCard(id) {
   const previousPile = proj.pile;
   const name = proj.name;
   proj.pile = "discard";
-  logActivity('moved "' + name + '" to ' + (isFantasy() ? "Discard" : "Irrelevant"));
+  logActivity('moved "' + name + '" to ' + (isFantasy() ? "Discard" : "Irrelevant"), id);
   saveState();
   renderAll();
   if (openDetailId === id) renderDetail();
@@ -4465,7 +4707,121 @@ function renderDetail() {
   stack.appendChild(renderQuestLog(proj));
   stack.appendChild(renderProjectNotesBox(proj));
   stack.appendChild(renderMapBox(proj));
+  stack.appendChild(renderCommentsBox(proj));
+  stack.appendChild(renderProjectHistoryBox(proj));
   detailBody.appendChild(stack);
+}
+
+function renderCommentsBox(proj) {
+  const box = document.createElement("div");
+  box.className = "section-box";
+  const h4 = document.createElement("h4");
+  h4.textContent = "💬 Comments";
+  box.appendChild(h4);
+
+  if (!Array.isArray(proj.comments)) proj.comments = [];
+
+  if (proj.comments.length) {
+    const list = document.createElement("div");
+    list.className = "comment-list";
+    proj.comments.slice().reverse().forEach((c) => {
+      const realIdx = proj.comments.indexOf(c);
+      const el = document.createElement("div");
+      el.className = "comment";
+      const head = document.createElement("div");
+      head.className = "comment-head";
+      const user = document.createElement("span");
+      user.className = "comment-user";
+      user.textContent = c.user || "Someone";
+      head.appendChild(user);
+      const time = document.createElement("span");
+      time.className = "comment-time";
+      time.textContent = timeAgo(c.ts);
+      time.title = new Date(c.ts).toLocaleString();
+      head.appendChild(time);
+      const del = document.createElement("button");
+      del.className = "comment-delete";
+      del.textContent = "✕";
+      del.title = "Delete comment";
+      del.setAttribute("aria-label", "Delete comment");
+      del.addEventListener("click", () => { proj.comments.splice(realIdx, 1); persistAndRefresh(); });
+      head.appendChild(del);
+      el.appendChild(head);
+      const body = document.createElement("div");
+      body.className = "comment-body";
+      body.textContent = c.text;
+      applyBidi(body, c.text);
+      el.appendChild(body);
+      list.appendChild(el);
+    });
+    box.appendChild(list);
+  }
+
+  const inputRow = document.createElement("div");
+  inputRow.className = "item-input";
+  const ta = document.createElement("textarea");
+  ta.className = "note-input";
+  ta.rows = 2;
+  ta.placeholder = "Write a comment...";
+  ta.dir = "auto";
+  const addBtn = document.createElement("button");
+  addBtn.className = "btn small-btn";
+  addBtn.textContent = "Post";
+  function addComment() {
+    const v = ta.value.trim();
+    if (!v) return;
+    proj.comments.push({ user: currentUserLabel, text: v, ts: Date.now() });
+    ta.value = "";
+    persistAndRefresh();
+  }
+  addBtn.addEventListener("click", addComment);
+  ta.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); addComment(); } });
+  inputRow.appendChild(ta);
+  inputRow.appendChild(addBtn);
+  box.appendChild(inputRow);
+
+  return box;
+}
+
+function renderProjectHistoryBox(proj) {
+  const box = document.createElement("div");
+  box.className = "section-box";
+  const h4 = document.createElement("h4");
+  h4.textContent = "🕰️ History";
+  box.appendChild(h4);
+
+  const entries = (state.activity || []).filter(a => a.projectId === proj.id);
+  if (entries.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "missions-empty";
+    empty.textContent = "No history yet for this project.";
+    box.appendChild(empty);
+    return box;
+  }
+
+  const list = document.createElement("div");
+  list.className = "history-list";
+  entries.slice().reverse().forEach(a => {
+    const row = document.createElement("div");
+    row.className = "history-entry";
+    const user = document.createElement("span");
+    user.className = "history-user";
+    user.textContent = a.user || "Someone";
+    row.appendChild(user);
+    const text = document.createElement("span");
+    text.className = "history-text";
+    text.textContent = a.text;
+    text.dir = "ltr";
+    row.appendChild(text);
+    const time = document.createElement("span");
+    time.className = "history-time";
+    time.textContent = timeAgo(a.ts);
+    time.title = new Date(a.ts).toLocaleString();
+    row.appendChild(time);
+    list.appendChild(row);
+  });
+  box.appendChild(list);
+  return box;
 }
 
 function renderAssignmentBox(proj) {
@@ -4475,10 +4831,7 @@ function renderAssignmentBox(proj) {
   h4.textContent = "🧭 Assignment";
   box.appendChild(h4);
 
-  const grid = document.createElement("div");
-  grid.className = "assign-grid";
-
-  // Assignee
+  // Assignee (project-level). Due dates now live on individual to-dos.
   const aField = document.createElement("div");
   aField.className = "assign-field";
   const aLabel = document.createElement("label");
@@ -4500,7 +4853,7 @@ function renderAssignmentBox(proj) {
     const v = aInput.value.trim();
     if (v === (proj.assignee || "")) return;
     proj.assignee = v;
-    logActivity(v ? ('assigned "' + proj.name + '" to ' + v) : ('unassigned "' + proj.name + '"'));
+    logActivity(v ? ('assigned "' + proj.name + '" to ' + v) : ('unassigned "' + proj.name + '"'), proj.id);
     persistAndRefresh();
     renderToolbar(); // refresh the assignee filter list with any new name
   }
@@ -4510,53 +4863,8 @@ function renderAssignmentBox(proj) {
   aField.appendChild(aLabel);
   aField.appendChild(aInput);
   aField.appendChild(dl);
-  grid.appendChild(aField);
+  box.appendChild(aField);
 
-  // Due date
-  const dField = document.createElement("div");
-  dField.className = "assign-field";
-  const dLabel = document.createElement("label");
-  dLabel.textContent = "Due date";
-  const dInput = document.createElement("input");
-  dInput.type = "date";
-  dInput.value = proj.dueDate || "";
-  function setDue(v) {
-    if (v === (proj.dueDate || "")) return;
-    proj.dueDate = v;
-    logActivity(v ? ('set due date for "' + proj.name + '" to ' + v) : ('cleared due date for "' + proj.name + '"'));
-    persistAndRefresh();
-  }
-  dInput.addEventListener("change", () => setDue(dInput.value || ""));
-  dField.appendChild(dLabel);
-  dField.appendChild(dInput);
-
-  // Quick-pick buttons
-  const quick = document.createElement("div");
-  quick.className = "due-quick";
-  function plusDays(n) {
-    const d = new Date();
-    d.setDate(d.getDate() + n);
-    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-  }
-  [["Today", 0], ["+1 wk", 7], ["+1 mo", 30]].forEach(([label, days]) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.textContent = label;
-    btn.addEventListener("click", () => setDue(plusDays(days)));
-    quick.appendChild(btn);
-  });
-  if (proj.dueDate) {
-    const clr = document.createElement("button");
-    clr.type = "button";
-    clr.textContent = "Clear";
-    clr.addEventListener("click", () => setDue(""));
-    quick.appendChild(clr);
-  }
-  dField.appendChild(quick);
-
-  grid.appendChild(dField);
-
-  box.appendChild(grid);
   return box;
 }
 
@@ -4581,7 +4889,7 @@ function renderStepper(proj) {
     step.addEventListener("click", () => {
       if (proj.statusIndex !== i) {
         proj.statusIndex = i;
-        logActivity('set "' + proj.name + '" to ' + stage.name);
+        logActivity('set "' + proj.name + '" to ' + stage.name, proj.id);
       }
       persistAndRefresh();
     });
@@ -4716,8 +5024,8 @@ function renderQuestLog(proj) {
   function addQuest() {
     const val = input.value.trim();
     if (!val) return;
-    proj.todos.push({ text: val, description: "", subs: [], done: false });
-    logActivity('added ' + (isFantasy() ? "quest" : "to-do") + ' "' + val + '" to "' + proj.name + '"');
+    proj.todos.push({ text: val, description: "", subs: [], done: false, assignee: "", dueDate: "" });
+    logActivity('added ' + (isFantasy() ? "quest" : "to-do") + ' "' + val + '" to "' + proj.name + '"', proj.id);
     input.value = "";
     persistAndRefresh();
   }
@@ -4782,7 +5090,7 @@ function renderQuestCard(proj, quest, idx) {
   toggle.textContent = quest.done ? "✓" : "";
   toggle.addEventListener("click", () => {
     quest.done = !quest.done;
-    logActivity((quest.done ? "completed " : "reopened ") + (isFantasy() ? "quest" : "to-do") + ' "' + quest.text + '" on "' + proj.name + '"');
+    logActivity((quest.done ? "completed " : "reopened ") + (isFantasy() ? "quest" : "to-do") + ' "' + quest.text + '" on "' + proj.name + '"', proj.id);
     persistAndRefresh();
   });
   head.appendChild(toggle);
@@ -4815,12 +5123,33 @@ function renderQuestCard(proj, quest, idx) {
     head.appendChild(prog);
   }
 
+  // Assignee avatar + due badge shown compactly in the head.
+  const headBadges = document.createElement("span");
+  headBadges.className = "quest-head-badges";
+  if (quest.assignee) {
+    const av = document.createElement("span");
+    av.className = "assignee-avatar";
+    av.style.background = assigneeColor(quest.assignee);
+    av.textContent = assigneeInitials(quest.assignee);
+    av.title = quest.assignee;
+    headBadges.appendChild(av);
+  }
+  if (quest.dueDate) {
+    const due = dueBadgeEl(quest.dueDate);
+    if (due) headBadges.appendChild(due);
+  }
+  if (headBadges.childNodes.length) head.appendChild(headBadges);
+
   const del = document.createElement("button");
   del.className = "entry-delete";
   del.title = "Delete quest";
   del.setAttribute("aria-label", "Delete quest");
   del.textContent = "✕";
-  del.addEventListener("click", () => { proj.todos.splice(idx, 1); persistAndRefresh(); });
+  del.addEventListener("click", () => {
+    logActivity('removed ' + (isFantasy() ? "quest" : "to-do") + ' "' + quest.text + '" from "' + proj.name + '"', proj.id);
+    proj.todos.splice(idx, 1);
+    persistAndRefresh();
+  });
   head.appendChild(del);
 
   card.appendChild(head);
@@ -4852,6 +5181,44 @@ function renderQuestCard(proj, quest, idx) {
     });
   });
   card.appendChild(desc);
+
+  // Assignee + due date for this to-do.
+  const meta = document.createElement("div");
+  meta.className = "quest-meta";
+  const qAssignee = document.createElement("input");
+  qAssignee.type = "text";
+  qAssignee.placeholder = "👤 Assignee";
+  qAssignee.value = quest.assignee || "";
+  qAssignee.setAttribute("list", "assigneeOptions");
+  applyBidi(qAssignee, qAssignee.value);
+  function commitQAssignee() {
+    const v = qAssignee.value.trim();
+    if (v === (quest.assignee || "")) return;
+    quest.assignee = v;
+    logActivity((v ? ('assigned ' + (isFantasy() ? "quest" : "to-do") + ' "' + quest.text + '" to ' + v)
+                   : ('unassigned ' + (isFantasy() ? "quest" : "to-do") + ' "' + quest.text + '"')) + ' on "' + proj.name + '"', proj.id);
+    persistAndRefresh();
+    renderToolbar();
+  }
+  qAssignee.addEventListener("change", commitQAssignee);
+  qAssignee.addEventListener("blur", commitQAssignee);
+  qAssignee.addEventListener("keydown", e => { if (e.key === "Enter") qAssignee.blur(); });
+  meta.appendChild(qAssignee);
+
+  const qDue = document.createElement("input");
+  qDue.type = "date";
+  qDue.value = quest.dueDate || "";
+  qDue.title = "Due date";
+  qDue.addEventListener("change", () => {
+    const v = qDue.value || "";
+    if (v === (quest.dueDate || "")) return;
+    quest.dueDate = v;
+    logActivity((v ? ('set due date for ' + (isFantasy() ? "quest" : "to-do") + ' "' + quest.text + '" to ' + v)
+                   : ('cleared due date for ' + (isFantasy() ? "quest" : "to-do") + ' "' + quest.text + '"')) + ' on "' + proj.name + '"', proj.id);
+    persistAndRefresh();
+  });
+  meta.appendChild(qDue);
+  card.appendChild(meta);
 
   const subs = document.createElement("div");
   subs.className = "quest-subs";

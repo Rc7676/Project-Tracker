@@ -116,6 +116,13 @@ plain in-memory `state` object and calls `saveState()`.
 
 ## Tips
 
+- **Views:** switch between **Cards**, **Table**, and **Kanban**. In Kanban,
+  drag a project card between stage columns to change its status.
+- **Due dates live on to-dos:** each to-do has its own assignee and due date.
+  A project's card/table/overdue view reflects the soonest upcoming (open)
+  to-do, so deadlines still surface at a glance.
+- **Comments & history:** each project's detail view has a comment thread and a
+  history of changes made to it.
 - **Keyboard shortcuts:** `/` focuses search, `n` starts a new project, `s`
   toggles multi-select, `Esc` closes a dialog / exits select mode.
 - **Bulk edits:** click **☑️ Select**, tick several projects, then set their
