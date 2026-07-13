@@ -1893,7 +1893,7 @@
      rules above and is shown only when data-skin="fantasy".
      Here we override the decorative parts back to a plain look.
      ============================================================ */
-  html[data-skin="normal"] {
+  html:not([data-skin="fantasy"]) {
     --font-display: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
     --bg: #eef0f4;
     --card-bg: #ffffff;
@@ -1916,7 +1916,7 @@
     --table-felt-1: #eef0f4;
     --table-felt-2: #e4e7ec;
   }
-  html[data-skin="normal"][data-theme="dark"] {
+  html:not([data-skin="fantasy"])[data-theme="dark"] {
     --bg: #1a1d24;
     --card-bg: #22262e;
     --border: #333a45;
@@ -1935,14 +1935,14 @@
     --table-felt-2: #14161b;
   }
   /* Flat page background, no wood/embers/vignette */
-  html[data-skin="normal"] { background: var(--bg); }
-  html[data-skin="normal"] body {
+  html:not([data-skin="fantasy"]) { background: var(--bg); }
+  html:not([data-skin="fantasy"]) body {
     background: var(--bg);
   }
-  html[data-skin="normal"] body::before { display: none; }
-  html[data-skin="normal"] .ambient-embers { display: none; }
+  html:not([data-skin="fantasy"]) body::before { display: none; }
+  html:not([data-skin="fantasy"]) .ambient-embers { display: none; }
   /* Plain title */
-  html[data-skin="normal"] h1 {
+  html:not([data-skin="fantasy"]) h1 {
     background: none;
     -webkit-text-fill-color: currentColor;
     color: var(--text);
@@ -1950,48 +1950,48 @@
     filter: none;
     font-weight: 700;
   }
-  html[data-skin="normal"] h1::before,
-  html[data-skin="normal"] h1::after { display: none; }
-  html[data-skin="normal"] .header-divider { background: linear-gradient(90deg, transparent, var(--border) 50%, transparent); }
-  html[data-skin="normal"] .header-divider span { background: var(--muted); box-shadow: none; }
+  html:not([data-skin="fantasy"]) h1::before,
+  html:not([data-skin="fantasy"]) h1::after { display: none; }
+  html:not([data-skin="fantasy"]) .header-divider { background: linear-gradient(90deg, transparent, var(--border) 50%, transparent); }
+  html:not([data-skin="fantasy"]) .header-divider span { background: var(--muted); box-shadow: none; }
   /* Hide all the decorative corner marks / inner frames */
-  html[data-skin="normal"] .frame-corner,
-  html[data-skin="normal"] .corner-mark,
-  html[data-skin="normal"] .card-corner,
-  html[data-skin="normal"] .toolbar::before,
-  html[data-skin="normal"] .modal-panel::after,
-  html[data-skin="normal"] .project-card::before,
-  html[data-skin="normal"] .quest-card::after { display: none; }
+  html:not([data-skin="fantasy"]) .frame-corner,
+  html:not([data-skin="fantasy"]) .corner-mark,
+  html:not([data-skin="fantasy"]) .card-corner,
+  html:not([data-skin="fantasy"]) .toolbar::before,
+  html:not([data-skin="fantasy"]) .modal-panel::after,
+  html:not([data-skin="fantasy"]) .project-card::before,
+  html:not([data-skin="fantasy"]) .quest-card::after { display: none; }
   /* Panels: flat white cards with a subtle border */
-  html[data-skin="normal"] .toolbar,
-  html[data-skin="normal"] .missions-panel,
-  html[data-skin="normal"] .hand-strip,
-  html[data-skin="normal"] .footer-bar,
-  html[data-skin="normal"] .table-wrap,
-  html[data-skin="normal"] .discard-pile {
+  html:not([data-skin="fantasy"]) .toolbar,
+  html:not([data-skin="fantasy"]) .missions-panel,
+  html:not([data-skin="fantasy"]) .hand-strip,
+  html:not([data-skin="fantasy"]) .footer-bar,
+  html:not([data-skin="fantasy"]) .table-wrap,
+  html:not([data-skin="fantasy"]) .discard-pile {
     background: var(--card-bg);
     border: 1px solid var(--border);
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   }
-  html[data-skin="normal"] .missions-header,
-  html[data-skin="normal"] .hand-strip-header {
+  html:not([data-skin="fantasy"]) .missions-header,
+  html:not([data-skin="fantasy"]) .hand-strip-header {
     background: transparent;
     background-image: none;
   }
-  html[data-skin="normal"] .missions-header h2,
-  html[data-skin="normal"] .hand-strip-header h2,
-  html[data-skin="normal"] .toolbar-label,
-  html[data-skin="normal"] .section-box h4 { color: var(--text); }
-  html[data-skin="normal"] .section-box h4::after { content: ""; }
-  html[data-skin="normal"] table.projects-table th {
+  html:not([data-skin="fantasy"]) .missions-header h2,
+  html:not([data-skin="fantasy"]) .hand-strip-header h2,
+  html:not([data-skin="fantasy"]) .toolbar-label,
+  html:not([data-skin="fantasy"]) .section-box h4 { color: var(--text); }
+  html:not([data-skin="fantasy"]) .section-box h4::after { content: ""; }
+  html:not([data-skin="fantasy"]) table.projects-table th {
     background: var(--bg);
     border-bottom: 1px solid var(--border);
     color: var(--muted);
   }
   /* Summary bar now sits on a light page */
-  html[data-skin="normal"] .summary-bar { color: var(--muted); text-shadow: none; }
+  html:not([data-skin="fantasy"]) .summary-bar { color: var(--muted); text-shadow: none; }
   /* Cards: flat with a category-colored top accent */
-  html[data-skin="normal"] .project-card {
+  html:not([data-skin="fantasy"]) .project-card {
     background: var(--card-bg);
     border: 1px solid var(--border);
     border-top: 3px solid var(--cat-color, var(--accent));
@@ -2000,18 +2000,18 @@
     color: var(--text);
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   }
-  html[data-skin="normal"] .project-card:hover {
+  html:not([data-skin="fantasy"]) .project-card:hover {
     box-shadow: 0 6px 18px rgba(0,0,0,0.12);
     transform: translateY(-2px);
   }
-  html[data-skin="normal"] .project-card.tier-rare,
-  html[data-skin="normal"] .project-card.tier-epic,
-  html[data-skin="normal"] .project-card.tier-legendary {
+  html:not([data-skin="fantasy"]) .project-card.tier-rare,
+  html:not([data-skin="fantasy"]) .project-card.tier-epic,
+  html:not([data-skin="fantasy"]) .project-card.tier-legendary {
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   }
-  html[data-skin="normal"] .project-card.tier-legendary::after { display: none; }
+  html:not([data-skin="fantasy"]) .project-card.tier-legendary::after { display: none; }
   /* Card title: plain heading, no ribbon */
-  html[data-skin="normal"] .card-header h3 {
+  html:not([data-skin="fantasy"]) .card-header h3 {
     background: none;
     clip-path: none;
     color: var(--text);
@@ -2021,22 +2021,22 @@
     max-width: 100%;
   }
   /* Art window: subtle inset panel */
-  html[data-skin="normal"] .card-art {
+  html:not([data-skin="fantasy"]) .card-art {
     background: var(--bg);
     border: 1px solid var(--border);
     box-shadow: none;
   }
-  html[data-skin="normal"] .card-typeline { border-bottom: 1px solid var(--border); }
-  html[data-skin="normal"] .card-rules {
+  html:not([data-skin="fantasy"]) .card-typeline { border-bottom: 1px solid var(--border); }
+  html:not([data-skin="fantasy"]) .card-rules {
     background: var(--bg);
     border: 1px solid var(--border);
     font-style: normal;
     font-family: inherit;
     color: var(--muted);
   }
-  html[data-skin="normal"] .card-stat-badge { border-color: var(--accent); }
+  html:not([data-skin="fantasy"]) .card-stat-badge { border-color: var(--accent); }
   /* Hand cards: flat */
-  html[data-skin="normal"] .hand-card {
+  html:not([data-skin="fantasy"]) .hand-card {
     background: var(--card-bg);
     border: 1px solid var(--border);
     border-left: 3px solid var(--cat-color, var(--accent));
@@ -2044,21 +2044,21 @@
     padding: 12px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   }
-  html[data-skin="normal"] .hand-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
-  html[data-skin="normal"] .hand-card h4 { color: var(--text); }
+  html:not([data-skin="fantasy"]) .hand-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+  html:not([data-skin="fantasy"]) .hand-card h4 { color: var(--text); }
   /* Notes: flat */
-  html[data-skin="normal"] .note-entry {
+  html:not([data-skin="fantasy"]) .note-entry {
     background: var(--card-bg);
     border: 1px solid var(--border);
     border-left: 3px solid var(--accent);
     box-shadow: none;
     color: var(--text);
   }
-  html[data-skin="normal"] .note-entry::after { display: none; }
-  html[data-skin="normal"] .note-entry .note-text { color: var(--text); }
+  html:not([data-skin="fantasy"]) .note-entry::after { display: none; }
+  html:not([data-skin="fantasy"]) .note-entry .note-text { color: var(--text); }
   /* Modal: plain */
-  html[data-skin="normal"] .modal-panel { border: 1px solid var(--border); }
-  html[data-skin="normal"] .modal-header { border-bottom: 1px solid var(--border); }
+  html:not([data-skin="fantasy"]) .modal-panel { border: 1px solid var(--border); }
+  html:not([data-skin="fantasy"]) .modal-header { border-bottom: 1px solid var(--border); }
 
   /* Sync status pill (shared-data indicator) */
   .sync-status {
@@ -2390,6 +2390,105 @@
   }
 
   /* Role pill + team panel */
+  /* ============================================================
+     Fun themes — palettes + backgrounds layered over the flat
+     (non-fantasy) layout. Each theme wins in light AND dark by
+     also matching the [data-theme="dark"] selector.
+     ============================================================ */
+
+  /* ⚽ Soccer / Pitch */
+  html[data-skin="soccer"], html[data-skin="soccer"][data-theme="dark"] {
+    color-scheme: light;
+    --bg:#e9f5ec; --card-bg:#ffffff; --border:#cbe6d2; --text:#12351d; --muted:#4f7a5c;
+    --accent:#1a7f37; --accent-dark:#136030; --gold:#0b6b2b; --gold-bright:#37b24d;
+    --row-hover:#eef7f0; --danger:#e03131;
+  }
+  html[data-skin="soccer"] body {
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0 64px, rgba(0,0,0,0.05) 64px 128px),
+      linear-gradient(160deg, #37b24d, #2b8a3e);
+    background-attachment: fixed;
+  }
+  html[data-skin="soccer"] h1 { color:#fff; text-shadow:0 2px 6px rgba(0,0,0,0.3); }
+  html[data-skin="soccer"] .summary-bar { color:#eaffef; text-shadow:0 1px 2px rgba(0,0,0,0.35); }
+
+  /* 🚀 Space */
+  html[data-skin="space"], html[data-skin="space"][data-theme="dark"] {
+    color-scheme: dark;
+    --bg:#0a0f1e; --card-bg:#141b31; --border:#28304f; --text:#e4ebff; --muted:#8b97c0;
+    --accent:#4dd2ff; --accent-dark:#2ba9db; --gold:#a98bff; --gold-bright:#c9b6ff;
+    --row-hover:rgba(120,140,255,0.10); --danger:#ff6b8a;
+  }
+  html[data-skin="space"] body {
+    background:
+      radial-gradient(1.5px 1.5px at 20% 30%, #fff, transparent),
+      radial-gradient(1.5px 1.5px at 70% 60%, #cfe6ff, transparent),
+      radial-gradient(2px 2px at 40% 80%, #fff, transparent),
+      radial-gradient(1px 1px at 85% 22%, #fff, transparent),
+      radial-gradient(1px 1px at 55% 12%, #dde, transparent),
+      radial-gradient(1200px 700px at 50% -10%, #1b2550, transparent),
+      linear-gradient(180deg, #0a0f1e, #05070f);
+    background-attachment: fixed;
+  }
+
+  /* 🌆 Synthwave */
+  html[data-skin="synthwave"], html[data-skin="synthwave"][data-theme="dark"] {
+    color-scheme: dark;
+    --bg:#1a1030; --card-bg:#241848; --border:#3a2a66; --text:#ffe9ff; --muted:#c39fde;
+    --accent:#ff3ca6; --accent-dark:#d81f86; --gold:#22d3ee; --gold-bright:#67e8f9;
+    --row-hover:rgba(255,60,166,0.10); --danger:#ff5470;
+  }
+  html[data-skin="synthwave"] body {
+    background:
+      repeating-linear-gradient(0deg, transparent 0 38px, rgba(34,211,238,0.10) 38px 39px),
+      linear-gradient(180deg, #2a1a4d 0%, #3d1a55 40%, #6a1f5e 72%, #b5327d 100%);
+    background-attachment: fixed;
+  }
+
+  /* 🌊 Ocean */
+  html[data-skin="ocean"], html[data-skin="ocean"][data-theme="dark"] {
+    color-scheme: light;
+    --bg:#e8f5fb; --card-bg:#ffffff; --border:#bfe0ef; --text:#0b2f43; --muted:#4d7183;
+    --accent:#0288d1; --accent-dark:#026aa1; --gold:#0d7a99; --gold-bright:#22b8cf;
+    --row-hover:#eef8fc; --danger:#e64980;
+  }
+  html[data-skin="ocean"] body {
+    background:
+      radial-gradient(circle at 50% -20%, rgba(255,255,255,0.18), transparent 50%),
+      linear-gradient(180deg, #2a9dc4 0%, #1a6f98 45%, #0b4a6f 100%);
+    background-attachment: fixed;
+  }
+  html[data-skin="ocean"] h1 { color:#fff; text-shadow:0 2px 6px rgba(0,0,0,0.3); }
+  html[data-skin="ocean"] .summary-bar { color:#e6f7ff; text-shadow:0 1px 2px rgba(0,0,0,0.3); }
+
+  /* 🌲 Forest */
+  html[data-skin="forest"], html[data-skin="forest"][data-theme="dark"] {
+    color-scheme: light;
+    --bg:#eef4e8; --card-bg:#ffffff; --border:#d2e0c6; --text:#20331a; --muted:#5c7350;
+    --accent:#3f8f3f; --accent-dark:#2e6f2e; --gold:#6b4f2a; --gold-bright:#8a6a3c;
+    --row-hover:#f0f5ea; --danger:#c9432f;
+  }
+  html[data-skin="forest"] body {
+    background:
+      radial-gradient(circle at 15% 10%, rgba(255,255,255,0.06), transparent 40%),
+      linear-gradient(160deg, #3a5a2e, #24361f);
+    background-attachment: fixed;
+  }
+  html[data-skin="forest"] h1 { color:#eef7e6; text-shadow:0 2px 6px rgba(0,0,0,0.3); }
+  html[data-skin="forest"] .summary-bar { color:#e5f2da; text-shadow:0 1px 2px rgba(0,0,0,0.3); }
+
+  .theme-select {
+    cursor: pointer;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 13.5px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    background: var(--card-bg);
+    color: var(--text);
+  }
+
   .role-pill {
     display: inline-flex;
     align-items: center;
@@ -2443,7 +2542,7 @@
     flex-direction: column;
     max-height: 74vh;
   }
-  html[data-skin="normal"] .kanban-col { background: var(--card-bg); border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  html:not([data-skin="fantasy"]) .kanban-col { background: var(--card-bg); border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
   .kanban-col-header {
     display: flex;
     align-items: center;
@@ -2566,7 +2665,7 @@
       var raw = localStorage.getItem("projectTrackerStateV2");
       var ui = raw ? (JSON.parse(raw).ui || {}) : {};
       document.documentElement.setAttribute("data-theme", ui.theme === "dark" ? "dark" : "light");
-      document.documentElement.setAttribute("data-skin", ui.skin === "fantasy" ? "fantasy" : "normal");
+      document.documentElement.setAttribute("data-skin", ui.skin || "normal");
     } catch (e) {
       document.documentElement.setAttribute("data-theme", "light");
       document.documentElement.setAttribute("data-skin", "normal");
@@ -2689,7 +2788,7 @@
         <button class="btn secondary" id="importBtn" title="Import backup (.json)">⬆️ Import Backup</button>
         <input type="file" id="importFileInput" accept="application/json,.json" style="display:none">
         <button class="btn secondary" id="themeToggleBtn" title="Toggle dark mode">🌙 Dark Mode</button>
-        <button class="btn secondary" id="skinToggleBtn" title="Toggle card style">🎴 Fantasy Cards</button>
+        <select class="theme-select" id="skinSelect" title="Theme"></select>
         <span class="sync-status local" id="syncStatus" title="Where your data is stored">
           <span class="sync-dot"></span><span id="syncStatusText">Local only</span>
         </span>
@@ -3163,6 +3262,18 @@ let state = loadState();
 let openDetailId = null;
 let selectMode = false;
 const selectedIds = new Set();
+
+// Available look-and-feel themes (skins).
+const THEMES = [
+  { id: "normal",    label: "📇 Normal" },
+  { id: "fantasy",   label: "🎴 Fantasy" },
+  { id: "soccer",    label: "⚽ Soccer" },
+  { id: "space",     label: "🚀 Space" },
+  { id: "synthwave", label: "🌆 Synthwave" },
+  { id: "ocean",     label: "🌊 Ocean" },
+  { id: "forest",    label: "🌲 Forest" }
+];
+function isValidSkin(s) { return THEMES.some(t => t.id === s); }
 const REDUCED_MOTION = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const RTL_PATTERN = new RegExp(
@@ -3181,9 +3292,10 @@ function applyTheme() {
   if (btn) btn.textContent = state.ui.theme === "dark" ? "☀️ Light Mode" : "🌙 Dark Mode";
 }
 function applySkin() {
+  if (!isValidSkin(state.ui.skin)) state.ui.skin = "normal";
   document.documentElement.setAttribute("data-skin", state.ui.skin);
-  const btn = document.getElementById("skinToggleBtn");
-  if (btn) btn.textContent = state.ui.skin === "fantasy" ? "📇 Normal Cards" : "🎴 Fantasy Cards";
+  const sel = document.getElementById("skinSelect");
+  if (sel && sel.value !== state.ui.skin) sel.value = state.ui.skin;
 }
 applyTheme();
 applySkin();
@@ -3805,10 +3917,11 @@ function renderToolbar() {
     applyTheme();
   };
 
-  const skinToggleBtn = document.getElementById("skinToggleBtn");
-  skinToggleBtn.textContent = state.ui.skin === "fantasy" ? "📇 Normal Cards" : "🎴 Fantasy Cards";
-  skinToggleBtn.onclick = () => {
-    state.ui.skin = state.ui.skin === "fantasy" ? "normal" : "fantasy";
+  const skinSelect = document.getElementById("skinSelect");
+  skinSelect.innerHTML = THEMES.map(t => `<option value="${t.id}">${t.label}</option>`).join("");
+  skinSelect.value = state.ui.skin;
+  skinSelect.onchange = () => {
+    state.ui.skin = skinSelect.value;
     saveState();
     applySkin();
     // Relabel the whole UI (Quests/To Do's, Hand/VIPs, tier marks, etc.).

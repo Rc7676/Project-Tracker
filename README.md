@@ -4,10 +4,10 @@ A single-file web app for tracking projects through stages, with quests
 (to-dos), sub-missions, notes, a hand/deck/discard workflow, filters, and
 saved presets. The whole app is one `index.html` — no build step.
 
-- **Two card styles.** The default is a clean, flat **Normal** look. A
-  **Fantasy** style (parchment / collectible-card-game) is one click away via
-  the **🎴 Fantasy Cards** button in the footer. Light/dark mode is a separate
-  toggle.
+- **Themes.** Pick a look from the theme dropdown in the footer: **Normal**
+  (clean/flat), **Fantasy** (parchment / collectible-card-game), plus fun ones —
+  **⚽ Soccer, 🚀 Space, 🌆 Synthwave, 🌊 Ocean, 🌲 Forest**. The theme is saved
+  per browser; light/dark mode is a separate toggle.
 - **Shared data (optional).** Out of the box the app saves to your own browser.
   Add two Supabase values and it becomes a live shared workspace: everyone who
   opens the app sees and edits the **same** projects, missions, and notes, with
