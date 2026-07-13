@@ -105,6 +105,14 @@ shows in comments, the activity log, and the footer instead of the email.
 **Activity filter:** the Activity panel has a *By user* dropdown to see just one
 person's changes.
 
+### Groups are per-user
+
+The **Projects / VIP / Irrelevant** groups are personal to each signed-in user —
+your VIP and Irrelevant lists are your own and don't affect what anyone else
+sees. Any role (even a Viewer) can organize their own groups. Permanently
+deleting a project (which removes it for everyone) stays an admin-only action
+(**🗑️ Delete forever**, in a project's detail view or the Irrelevant list).
+
 The **General To-Do's, General Notes and Project Statistics** panels are hidden
 from to-do editors (admins and viewers still see them). Anyone not listed is a
 **Viewer**. The admin email(s) are set in `index.html`

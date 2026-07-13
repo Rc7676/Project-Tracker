@@ -2973,7 +2973,16 @@ function mergeMissingDefaults(projects) {
 function migrateState(parsed) {
   if (!Array.isArray(parsed.projects)) parsed.projects = [];
   parsed.projects.forEach(p => {
-    if (!p.pile) p.pile = "deck";
+    // Groups are now per-user (p.piles[email]). Migrate the legacy shared
+    // p.pile once: keep the original owner's (first admin's) view, everyone
+    // else starts in Projects. LEGACY_PILE_OWNER must match BOOTSTRAP_ADMINS[0].
+    if (!p.piles || typeof p.piles !== "object" || Array.isArray(p.piles)) {
+      p.piles = {};
+      if (typeof p.pile === "string" && p.pile !== "deck") {
+        p.piles["razcohen7676@gmail.com"] = p.pile;
+      }
+    }
+    delete p.pile;
 
     // Notes: legacy single string -> array of { text }
     if (typeof p.notes === "string") {
@@ -3322,6 +3331,20 @@ function can(action, project) {
   if (action === "editTodos") return canEditTodos(project);
   return false;
 }
+/* ---- Per-user Groups (Projects / VIP / Irrelevant) ----
+   Each user keeps their own pile per project in proj.piles[email].
+   Unset = "deck" (Projects). Everyone can manage their own grouping. */
+function pileKey() { return (currentUserEmail || "__local__").toLowerCase(); }
+function getPile(proj) {
+  if (proj && proj.piles && typeof proj.piles === "object") return proj.piles[pileKey()] || "deck";
+  return "deck";
+}
+function setPileValue(proj, val) {
+  if (!proj.piles || typeof proj.piles !== "object") proj.piles = {};
+  if (val === "deck") delete proj.piles[pileKey()]; // keep it sparse (default = deck)
+  else proj.piles[pileKey()] = val;
+}
+
 // Display name for an email (admin-managed), falling back to the email prefix.
 function displayNameFor(email) {
   if (!email) return "";
@@ -3631,7 +3654,7 @@ function newProject(name, category) {
     notes: [],
     todos: [],
     comments: [],
-    pile: "deck",
+    piles: {},
     assignee: "",
     dueDate: ""
   };
@@ -3653,7 +3676,7 @@ function getFilteredProjects() {
     const openTodos = p.todos.filter(t => !t.done).length;
     if (!passesMultiFilter(categoryFilters, CATEGORIES.length, () => categoryFilters.includes(p.category))) return false;
     if (!passesMultiFilter(statusFilters, STAGES.length, () => statusFilters.includes(p.statusIndex))) return false;
-    if (!passesMultiFilter(pileFilters, PILE_OPTIONS.length, () => pileFilters.includes(p.pile))) return false;
+    if (!passesMultiFilter(pileFilters, PILE_OPTIONS.length, () => pileFilters.includes(getPile(p)))) return false;
     if (assigneeFilter && assigneeFilter !== "all") {
       if (assigneeFilter === "__unassigned__") { if (p.assignee) return false; }
       else if (p.assignee !== assigneeFilter) return false;
@@ -3934,7 +3957,7 @@ function filtersActive() {
     || u.dueFilter !== "all";
 }
 function countOverdue() {
-  return state.projects.filter(p => roleCanSee(p) && p.pile !== "discard" && (dueInfo(projectDueDate(p)) || {}).state === "overdue").length;
+  return state.projects.filter(p => roleCanSee(p) && getPile(p) !== "discard" && (dueInfo(projectDueDate(p)) || {}).state === "overdue").length;
 }
 function confirmAdd() {
   if (!can("addProject")) return permissionDenied("Only admins can add projects.");
@@ -3965,7 +3988,7 @@ function renderSummary() {
       parts.push(`<span><span class="summary-dot" style="background:${CATEGORY_META[cat]}"></span>${cat} ${count}</span>`);
     }
   });
-  const handCount = visible.filter(p => p.pile === "hand").length;
+  const handCount = visible.filter(p => getPile(p) === "hand").length;
   if (handCount > 0) {
     parts.push(`<span>${T("handInline")(handCount)}</span>`);
   }
@@ -3994,17 +4017,17 @@ function renderAll() {
 }
 
 function setPile(proj, pile, sourceEl) {
-  if (!can("editProject", proj)) return permissionDenied();
+  // Groups are personal (per-user) — anyone can organize their own view.
   if (pile === "hand") {
-    const handCount = state.projects.filter(p => p.pile === "hand" && p.id !== proj.id).length;
+    const handCount = state.projects.filter(p => getPile(p) === "hand" && p.id !== proj.id).length;
     if (handCount >= HAND_LIMIT) {
       alert(T("handFull")(HAND_LIMIT));
       return;
     }
   }
-  const isDrawing = pile === "hand" && proj.pile !== "hand";
+  const isDrawing = pile === "hand" && getPile(proj) !== "hand";
   const startRect = (isDrawing && sourceEl) ? sourceEl.getBoundingClientRect() : null;
-  proj.pile = pile;
+  setPileValue(proj, pile);
   saveState();
   renderAll();
   if (openDetailId === proj.id) renderDetail();
@@ -4054,7 +4077,7 @@ function renderHandStrip() {
   const title = document.createElement("h2");
   title.textContent = T("handTitle");
   header.appendChild(title);
-  const handProjects = state.projects.filter(p => p.pile === "hand" && roleCanSee(p));
+  const handProjects = state.projects.filter(p => getPile(p) === "hand" && roleCanSee(p));
   const count = document.createElement("span");
   count.className = "hand-strip-count";
   count.textContent = handProjects.length + "/" + HAND_LIMIT;
@@ -4111,7 +4134,7 @@ function renderHandStrip() {
 function renderDiscardPile() {
   const wrap = document.getElementById("discardPile");
   wrap.innerHTML = "";
-  const discarded = state.projects.filter(p => p.pile === "discard" && roleCanSee(p));
+  const discarded = state.projects.filter(p => getPile(p) === "discard" && roleCanSee(p));
 
   const header = document.createElement("div");
   header.className = "discard-header";
@@ -4158,14 +4181,17 @@ function renderDiscardPile() {
       const restoreBtn = document.createElement("button");
       restoreBtn.className = "btn secondary small-btn";
       restoreBtn.textContent = "↩ Restore";
-      restoreBtn.addEventListener("click", () => { logActivity('restored "' + proj.name + '"', proj.id); setPile(proj, "deck"); });
+      restoreBtn.addEventListener("click", () => setPile(proj, "deck"));
       row.appendChild(restoreBtn);
 
-      const delBtn = document.createElement("button");
-      delBtn.className = "icon-btn";
-      delBtn.textContent = "🗑️ Trash Forever";
-      delBtn.addEventListener("click", () => deleteProject(proj.id));
-      row.appendChild(delBtn);
+      // Permanent, global delete stays admin-only.
+      if (can("deleteProject")) {
+        const delBtn = document.createElement("button");
+        delBtn.className = "icon-btn";
+        delBtn.textContent = "🗑️ Delete forever";
+        delBtn.addEventListener("click", () => deleteProject(proj.id));
+        row.appendChild(delBtn);
+      }
 
       body.appendChild(row);
     });
@@ -4415,24 +4441,23 @@ function renderCardsView(projects) {
       card.appendChild(cb);
     }
 
-    if (can("trashProject")) {
-      const delBtn = document.createElement("button");
-      delBtn.className = "card-delete";
-      delBtn.title = T("trashTitle");
-      delBtn.setAttribute("aria-label", T("trashTitle"));
-      delBtn.textContent = "✕";
-      delBtn.addEventListener("click", e => { e.stopPropagation(); trashCard(proj.id); });
-      card.appendChild(delBtn);
+    // Personal grouping controls — available to everyone.
+    const delBtn = document.createElement("button");
+    delBtn.className = "card-delete";
+    delBtn.title = "Mark " + pileLabel("discard").replace(/^\S+\s/, "");
+    delBtn.setAttribute("aria-label", delBtn.title);
+    delBtn.textContent = "✕";
+    delBtn.addEventListener("click", e => { e.stopPropagation(); trashCard(proj.id); });
+    card.appendChild(delBtn);
 
-      if (proj.pile !== "hand") {
-        const toHandBtn = document.createElement("button");
-        toHandBtn.className = "card-to-hand";
-        toHandBtn.title = T("sendToHand");
-        toHandBtn.setAttribute("aria-label", T("sendToHand"));
-        toHandBtn.textContent = "\u{1F590}\u{FE0F}";
-        toHandBtn.addEventListener("click", e => { e.stopPropagation(); setPile(proj, "hand", e.currentTarget); });
-        card.appendChild(toHandBtn);
-      }
+    if (getPile(proj) !== "hand") {
+      const toHandBtn = document.createElement("button");
+      toHandBtn.className = "card-to-hand";
+      toHandBtn.title = T("sendToHand");
+      toHandBtn.setAttribute("aria-label", T("sendToHand"));
+      toHandBtn.textContent = "\u{1F590}\u{FE0F}";
+      toHandBtn.addEventListener("click", e => { e.stopPropagation(); setPile(proj, "hand", e.currentTarget); });
+      card.appendChild(toHandBtn);
     }
 
     const header = document.createElement("div");
@@ -4638,24 +4663,22 @@ function renderTableView(projects) {
     tr.appendChild(tdMap);
 
     const tdDelete = document.createElement("td");
-    if (can("trashProject")) {
-      if (proj.pile !== "hand") {
-        const toHandBtn = document.createElement("button");
-        toHandBtn.className = "table-delete";
-        toHandBtn.title = T("sendToHand");
-        toHandBtn.setAttribute("aria-label", T("sendToHand"));
-        toHandBtn.textContent = "\u{1F590}\u{FE0F}";
-        toHandBtn.addEventListener("click", e => { e.stopPropagation(); setPile(proj, "hand", e.currentTarget); });
-        tdDelete.appendChild(toHandBtn);
-      }
-      const delBtn = document.createElement("button");
-      delBtn.className = "table-delete";
-      delBtn.title = T("trashTitle");
-      delBtn.setAttribute("aria-label", T("trashTitle"));
-      delBtn.textContent = "✕";
-      delBtn.addEventListener("click", e => { e.stopPropagation(); trashCard(proj.id); });
-      tdDelete.appendChild(delBtn);
+    if (getPile(proj) !== "hand") {
+      const toHandBtn = document.createElement("button");
+      toHandBtn.className = "table-delete";
+      toHandBtn.title = T("sendToHand");
+      toHandBtn.setAttribute("aria-label", T("sendToHand"));
+      toHandBtn.textContent = "\u{1F590}\u{FE0F}";
+      toHandBtn.addEventListener("click", e => { e.stopPropagation(); setPile(proj, "hand", e.currentTarget); });
+      tdDelete.appendChild(toHandBtn);
     }
+    const delBtn = document.createElement("button");
+    delBtn.className = "table-delete";
+    delBtn.title = "Mark " + pileLabel("discard").replace(/^\S+\s/, "");
+    delBtn.setAttribute("aria-label", delBtn.title);
+    delBtn.textContent = "✕";
+    delBtn.addEventListener("click", e => { e.stopPropagation(); trashCard(proj.id); });
+    tdDelete.appendChild(delBtn);
     tr.appendChild(tdDelete);
 
     tbody.appendChild(tr);
@@ -4682,25 +4705,21 @@ function deleteProject(id) {
   }
 }
 
+// Moves the project to the current user's own "Irrelevant" group (personal).
 function trashCard(id) {
-  if (!can("trashProject")) return permissionDenied("You can't remove projects.");
   const proj = state.projects.find(p => p.id === id);
   if (!proj) return;
-  if (proj.pile === "discard") {
-    deleteProject(id);
-    return;
-  }
-  const previousPile = proj.pile;
+  const previousPile = getPile(proj);
+  if (previousPile === "discard") return; // already there
   const name = proj.name;
-  proj.pile = "discard";
-  logActivity('moved "' + name + '" to ' + (isFantasy() ? "Discard" : "Irrelevant"), id);
+  setPileValue(proj, "discard");
   saveState();
   renderAll();
   if (openDetailId === id) renderDetail();
   showUndoToast(T("sentToDiscard")(name), () => {
     const p = state.projects.find(pp => pp.id === id);
     if (!p) return;
-    p.pile = previousPile;
+    setPileValue(p, previousPile);
     saveState();
     renderAll();
     if (openDetailId === id) renderDetail();
@@ -4800,7 +4819,7 @@ const detailBody = document.getElementById("detailBody");
 
 document.getElementById("detailCloseBtn").addEventListener("click", closeDetail);
 document.getElementById("detailDeleteBtn").addEventListener("click", () => {
-  if (openDetailId) trashCard(openDetailId);
+  if (openDetailId) deleteProject(openDetailId);
 });
 detailOverlay.addEventListener("click", e => { if (e.target === detailOverlay) closeDetail(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeDetail(); });
@@ -4848,11 +4867,12 @@ function renderPileControl(proj) {
   label.className = "pile-control-label";
   label.textContent = isFantasy() ? "Pile:" : "Group:";
   box.appendChild(label);
+  const cur = getPile(proj);
   pileOptionsForSkin().forEach(opt => {
     const btn = document.createElement("button");
-    btn.className = "chip" + (proj.pile === opt.value ? " active" : "");
+    btn.className = "chip" + (cur === opt.value ? " active" : "");
     btn.textContent = opt.label;
-    if (proj.pile === opt.value) btn.style.background = "#323338";
+    if (cur === opt.value) btn.style.background = "#323338";
     btn.addEventListener("click", (e) => setPile(proj, opt.value, e.currentTarget));
     box.appendChild(btn);
   });
@@ -4879,15 +4899,16 @@ function renderDetail() {
     ribbon.className = "modal-tier-ribbon";
   }
   const delBtn = document.getElementById("detailDeleteBtn");
-  delBtn.textContent = T("trashBtn");
-  delBtn.style.display = can("trashProject") ? "" : "none";
+  delBtn.textContent = "🗑️ Delete forever";
+  delBtn.style.display = can("deleteProject") ? "" : "none";
 
   detailTitle.value = proj.name;
   detailTitle.readOnly = !can("editProject", proj);
   applyBidi(detailTitle, proj.name);
   detailBody.innerHTML = "";
   detailBody.appendChild(renderStepper(proj));
-  if (can("editProject", proj)) detailBody.appendChild(renderPileControl(proj));
+  // Groups (Projects/VIP/Irrelevant) are personal — everyone gets the control.
+  detailBody.appendChild(renderPileControl(proj));
 
   const stack = document.createElement("div");
   stack.className = "detail-stack";
@@ -5799,7 +5820,7 @@ function renderStatsPanel() {
     const pileColors = { deck: "#0073ea", hand: "#fdab3d", discard: "#676879" };
     body.appendChild(statBar(isFantasy() ? "Pile" : "Group", pileOptionsForSkin().map(o => ({
       label: o.label.replace(/^\S+\s/, ""),
-      count: state.projects.filter(p => p.pile === o.value).length,
+      count: state.projects.filter(p => getPile(p) === o.value).length,
       color: pileColors[o.value]
     }))));
 
@@ -6153,9 +6174,9 @@ function bulkApplyStatus(i) {
   renderAll();
 }
 function bulkApplyPile(pile) {
+  // Personal grouping (per-user) — not logged to the shared activity.
   const list = selectedProjects();
-  list.forEach(p => { p.pile = pile; });
-  logActivity("moved " + list.length + " project" + (list.length === 1 ? "" : "s") + " to " + pileLabel(pile).replace(/^\S+\s/, ""));
+  list.forEach(p => { setPileValue(p, pile); });
   saveState();
   clearSelection();
   renderAll();
@@ -6173,9 +6194,8 @@ function bulkAssign(name) {
 function bulkDelete() {
   const list = selectedProjects();
   if (list.length === 0) return;
-  if (!confirm("Move " + list.length + " project" + (list.length === 1 ? "" : "s") + " to " + (isFantasy() ? "Discard" : "Irrelevant") + "?")) return;
-  list.forEach(p => { p.pile = "discard"; });
-  logActivity("moved " + list.length + " project" + (list.length === 1 ? "" : "s") + " to " + (isFantasy() ? "Discard" : "Irrelevant"));
+  if (!confirm("Move " + list.length + " project" + (list.length === 1 ? "" : "s") + " to your " + (isFantasy() ? "Discard" : "Irrelevant") + "?")) return;
+  list.forEach(p => { setPileValue(p, "discard"); });
   saveState();
   clearSelection();
   renderAll();
