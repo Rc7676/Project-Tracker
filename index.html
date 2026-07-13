@@ -2389,6 +2389,42 @@
     color: var(--text);
   }
 
+  /* Role pill + team panel */
+  .role-pill {
+    display: inline-flex;
+    align-items: center;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--muted);
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--card-bg);
+    white-space: nowrap;
+  }
+  .team-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--border);
+    flex-wrap: wrap;
+  }
+  .team-row:last-child { border-bottom: none; }
+  .team-email { flex: 1; min-width: 140px; font-weight: 600; word-break: break-all; }
+  .team-row select, .team-add input, .team-add select {
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    font-size: 13px;
+    background: var(--card-bg);
+    color: var(--text);
+  }
+  .team-add { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; align-items: center; }
+  .team-add input { flex: 1; min-width: 160px; }
+  .team-note { font-size: 12.5px; color: var(--muted); margin: 4px 0 14px; }
+  .team-you { font-size: 11px; color: var(--accent); font-weight: 700; }
+
   /* ---- Kanban board view ---- */
   .kanban-board {
     display: flex;
@@ -2657,6 +2693,8 @@
         <span class="sync-status local" id="syncStatus" title="Where your data is stored">
           <span class="sync-dot"></span><span id="syncStatusText">Local only</span>
         </span>
+        <button class="btn secondary" id="teamBtn" title="Manage team roles" style="display:none">👥 Team</button>
+        <span class="role-pill" id="rolePill" style="display:none"></span>
         <button class="btn secondary" id="signOutBtn" title="Sign out" style="display:none">🚪 Sign out</button>
       </div>
     </main>
@@ -2694,6 +2732,19 @@
     <button class="btn" id="authSignInBtn">Sign In</button>
     <div class="auth-error" id="authError"></div>
     <p class="auth-hint">Accounts are created by your workspace admin.</p>
+  </div>
+</div>
+
+<div class="modal-overlay" id="teamOverlay">
+  <div class="modal-panel" id="teamPanel" style="max-width:560px">
+    <div class="modal-scroll">
+      <div class="modal-header" style="background:linear-gradient(165deg,rgba(255,255,255,0.18),rgba(0,0,0,0.28)),var(--accent);background-blend-mode:overlay">
+        <span class="modal-cat-icon">👥</span>
+        <span class="title-input" style="cursor:default">Team &amp; Roles</span>
+        <button class="modal-close" id="teamCloseBtn" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body" id="teamBody"></div>
+    </div>
   </div>
 </div>
 
@@ -2997,6 +3048,7 @@ function migrateState(parsed) {
   if (typeof parsed.ui.assigneeFilter !== "string") parsed.ui.assigneeFilter = "all";
   if (typeof parsed.ui.dueFilter !== "string") parsed.ui.dueFilter = "all";
   if (!Array.isArray(parsed.activity)) parsed.activity = [];
+  if (!parsed.roles || typeof parsed.roles !== "object" || Array.isArray(parsed.roles)) parsed.roles = {};
   if (!Array.isArray(parsed.filterPresets)) parsed.filterPresets = [];
   if (typeof parsed.generalNotes === "string") {
     parsed.generalNotes = parsed.generalNotes.trim() ? [{ text: parsed.generalNotes }] : [];
@@ -3034,6 +3086,7 @@ function loadState() {
         globalMissions: [],
         generalNotes: [],
         activity: [],
+        roles: {},
         filterPresets: [],
         seedMerged: true,
         ui: {
@@ -3064,6 +3117,7 @@ function loadState() {
     globalMissions: [],
     generalNotes: [],
     activity: [],
+    roles: {},
     filterPresets: [],
     seedMerged: true,
     ui: {
@@ -3162,6 +3216,7 @@ function sharedSnapshot() {
     globalMissions: state.globalMissions,
     generalNotes: state.generalNotes,
     activity: state.activity,
+    roles: state.roles,
     seedMerged: state.seedMerged
   };
 }
@@ -3173,6 +3228,7 @@ function applySharedData(remote) {
   if (Array.isArray(remote.globalMissions)) state.globalMissions = remote.globalMissions;
   if (Array.isArray(remote.generalNotes)) state.generalNotes = remote.generalNotes;
   if (Array.isArray(remote.activity)) state.activity = remote.activity;
+  if (remote.roles && typeof remote.roles === "object" && !Array.isArray(remote.roles)) state.roles = remote.roles;
   if (typeof remote.seedMerged === "boolean") state.seedMerged = remote.seedMerged;
   // Normalize shape (adds any missing fields on incoming records).
   state = migrateState(state);
@@ -3181,6 +3237,7 @@ function applySharedData(remote) {
 }
 
 function rerenderAllData() {
+  if (typeof applyRoleUI === "function") applyRoleUI();
   renderMissionsPanel();
   renderNotesPanel();
   renderActivityPanel();
@@ -3194,6 +3251,60 @@ function rerenderAllData() {
 /* ---- Activity / audit trail ---- */
 const ACTIVITY_LIMIT = 300;
 let currentUserLabel = "You";
+let currentUserEmail = null;
+
+/* ============================================================
+   Roles & permissions (UI guardrails).
+   NOTE: this is a workflow guardrail, not un-bypassable security.
+   The database still allows any signed-in user to write; real
+   enforcement would require server-side (RLS) rules. This layer
+   keeps trusted users in their lane.
+   ============================================================ */
+const BOOTSTRAP_ADMINS = ["razcohen7676@gmail.com"];
+const ROLE_LABELS = {
+  "admin": "Admin (full access)",
+  "todo-all": "To-do editor — all projects",
+  "todo-service": "To-do editor — At Service only",
+  "viewer": "Viewer (read-only)"
+};
+const AT_SERVICE_INDEX = STAGES.length - 1;
+
+function currentRole() {
+  // Local-only mode (no backend configured) = full access for the single user.
+  if (!backendEnabled()) return "admin";
+  const email = (currentUserEmail || "").trim().toLowerCase();
+  if (!email) return "viewer";
+  if (BOOTSTRAP_ADMINS.includes(email)) return "admin";
+  const roles = state.roles || {};
+  return roles[email] || "viewer";
+}
+function isAdmin() { return currentRole() === "admin"; }
+function canEditTodos(project) {
+  const r = currentRole();
+  if (r === "admin" || r === "todo-all") return true;
+  if (r === "todo-service") return !!project && project.statusIndex === AT_SERVICE_INDEX;
+  return false;
+}
+// Every mutating action routes through can(action, project).
+// Non-admins can ONLY edit to-dos (per configured roles); admins can do all.
+function can(action, project) {
+  if (currentRole() === "admin") return true;
+  if (action === "editTodos") return canEditTodos(project);
+  return false;
+}
+function permissionDenied(msg) {
+  showInfoToast("🔒 " + (msg || "You don't have permission to do that."));
+}
+function showInfoToast(message) {
+  const container = document.getElementById("toastContainer");
+  const toast = document.createElement("div");
+  toast.className = "toast";
+  const msg = document.createElement("span");
+  msg.textContent = message;
+  toast.appendChild(msg);
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3500);
+}
 
 function logActivity(text, projectId) {
   if (applyingRemote) return; // don't log changes we received from someone else
@@ -3376,11 +3487,12 @@ async function startSync() {
 
     if (data && data.data) {
       applySharedData(data.data);
-      rerenderAllData();
     } else {
       // First run: seed the shared workspace with what we have locally.
       await pushNow();
     }
+    // Always re-render so the UI reflects the signed-in user's role + data.
+    rerenderAllData();
     setSyncStatus("synced", "Shared · synced");
 
     // Live updates from other users (subscribe once).
@@ -3417,12 +3529,29 @@ function hideAuthOverlay() {
 }
 function updateAuthUI(signedIn, session) {
   const email = signedIn && session && session.user ? session.user.email : "";
+  currentUserEmail = email || null;
   // Label used in the activity log: the part before "@", or "You" when local.
   currentUserLabel = email ? email.split("@")[0] : "You";
   const btn = document.getElementById("signOutBtn");
   if (btn) {
     btn.style.display = signedIn ? "" : "none";
     btn.title = email ? ("Signed in as " + email + " — sign out") : "Sign out";
+  }
+  applyRoleUI();
+}
+
+// Show/hide the admin-only static controls and reflect the current role.
+function applyRoleUI() {
+  const admin = isAdmin();
+  const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? "" : "none"; };
+  show("addProjectBtn", admin);
+  show("selectModeBtn", admin);
+  show("importBtn", admin);
+  show("teamBtn", admin);
+  const rolePill = document.getElementById("rolePill");
+  if (rolePill) {
+    rolePill.textContent = "● " + (ROLE_LABELS[currentRole()] || currentRole());
+    rolePill.style.display = backendEnabled() ? "" : "none";
   }
 }
 async function doSignIn() {
@@ -3714,6 +3843,7 @@ function renderToolbar() {
   });
 
   renderPresetsList();
+  applyRoleUI();
 }
 
 /* ---------- Add bar ---------- */
@@ -3730,6 +3860,7 @@ CATEGORIES.forEach(cat => {
 });
 
 function openAddBar() {
+  if (!can("addProject")) return permissionDenied("Only admins can add projects.");
   addBar.classList.add("visible");
   addNameInput.value = "";
   addNameInput.focus();
@@ -3767,6 +3898,7 @@ function countOverdue() {
   return state.projects.filter(p => p.pile !== "discard" && (dueInfo(projectDueDate(p)) || {}).state === "overdue").length;
 }
 function confirmAdd() {
+  if (!can("addProject")) return permissionDenied("Only admins can add projects.");
   const name = addNameInput.value.trim();
   if (!name) return;
   const proj = newProject(name, addCategorySelect.value);
@@ -3822,6 +3954,7 @@ function renderAll() {
 }
 
 function setPile(proj, pile, sourceEl) {
+  if (!can("editProject", proj)) return permissionDenied();
   if (pile === "hand") {
     const handCount = state.projects.filter(p => p.pile === "hand" && p.id !== proj.id).length;
     if (handCount >= HAND_LIMIT) {
@@ -4109,6 +4242,7 @@ function renderKanbanView(projects) {
     col.addEventListener("drop", e => {
       e.preventDefault();
       col.classList.remove("drag-over");
+      if (!can("changeStatus")) return;
       const proj = state.projects.find(p => p.id === kanbanDragId);
       if (!proj || proj.statusIndex === i) return;
       proj.statusIndex = i;
@@ -4127,15 +4261,19 @@ function renderKanbanView(projects) {
 function renderKanbanCard(proj) {
   const card = document.createElement("div");
   card.className = "kanban-card";
-  card.draggable = true;
+  const canDrag = can("changeStatus");
+  card.draggable = canDrag;
+  if (!canDrag) card.style.cursor = "pointer";
   card.style.setProperty("--cat-color", CATEGORY_META[proj.category]);
 
-  card.addEventListener("dragstart", e => {
-    kanbanDragId = proj.id;
-    card.classList.add("dragging");
-    if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
-  });
-  card.addEventListener("dragend", () => { kanbanDragId = null; card.classList.remove("dragging"); });
+  if (canDrag) {
+    card.addEventListener("dragstart", e => {
+      kanbanDragId = proj.id;
+      card.classList.add("dragging");
+      if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
+    });
+    card.addEventListener("dragend", () => { kanbanDragId = null; card.classList.remove("dragging"); });
+  }
   card.addEventListener("click", () => openDetail(proj.id));
 
   const name = document.createElement("div");
@@ -4237,22 +4375,24 @@ function renderCardsView(projects) {
       card.appendChild(cb);
     }
 
-    const delBtn = document.createElement("button");
-    delBtn.className = "card-delete";
-    delBtn.title = T("trashTitle");
-    delBtn.setAttribute("aria-label", T("trashTitle"));
-    delBtn.textContent = "✕";
-    delBtn.addEventListener("click", e => { e.stopPropagation(); trashCard(proj.id); });
-    card.appendChild(delBtn);
+    if (isAdmin()) {
+      const delBtn = document.createElement("button");
+      delBtn.className = "card-delete";
+      delBtn.title = T("trashTitle");
+      delBtn.setAttribute("aria-label", T("trashTitle"));
+      delBtn.textContent = "✕";
+      delBtn.addEventListener("click", e => { e.stopPropagation(); trashCard(proj.id); });
+      card.appendChild(delBtn);
 
-    if (proj.pile !== "hand") {
-      const toHandBtn = document.createElement("button");
-      toHandBtn.className = "card-to-hand";
-      toHandBtn.title = T("sendToHand");
-      toHandBtn.setAttribute("aria-label", T("sendToHand"));
-      toHandBtn.textContent = "\u{1F590}\u{FE0F}";
-      toHandBtn.addEventListener("click", e => { e.stopPropagation(); setPile(proj, "hand", e.currentTarget); });
-      card.appendChild(toHandBtn);
+      if (proj.pile !== "hand") {
+        const toHandBtn = document.createElement("button");
+        toHandBtn.className = "card-to-hand";
+        toHandBtn.title = T("sendToHand");
+        toHandBtn.setAttribute("aria-label", T("sendToHand"));
+        toHandBtn.textContent = "\u{1F590}\u{FE0F}";
+        toHandBtn.addEventListener("click", e => { e.stopPropagation(); setPile(proj, "hand", e.currentTarget); });
+        card.appendChild(toHandBtn);
+      }
     }
 
     const header = document.createElement("div");
@@ -4458,22 +4598,24 @@ function renderTableView(projects) {
     tr.appendChild(tdMap);
 
     const tdDelete = document.createElement("td");
-    if (proj.pile !== "hand") {
-      const toHandBtn = document.createElement("button");
-      toHandBtn.className = "table-delete";
-      toHandBtn.title = T("sendToHand");
-      toHandBtn.setAttribute("aria-label", T("sendToHand"));
-      toHandBtn.textContent = "\u{1F590}\u{FE0F}";
-      toHandBtn.addEventListener("click", e => { e.stopPropagation(); setPile(proj, "hand", e.currentTarget); });
-      tdDelete.appendChild(toHandBtn);
+    if (isAdmin()) {
+      if (proj.pile !== "hand") {
+        const toHandBtn = document.createElement("button");
+        toHandBtn.className = "table-delete";
+        toHandBtn.title = T("sendToHand");
+        toHandBtn.setAttribute("aria-label", T("sendToHand"));
+        toHandBtn.textContent = "\u{1F590}\u{FE0F}";
+        toHandBtn.addEventListener("click", e => { e.stopPropagation(); setPile(proj, "hand", e.currentTarget); });
+        tdDelete.appendChild(toHandBtn);
+      }
+      const delBtn = document.createElement("button");
+      delBtn.className = "table-delete";
+      delBtn.title = T("trashTitle");
+      delBtn.setAttribute("aria-label", T("trashTitle"));
+      delBtn.textContent = "✕";
+      delBtn.addEventListener("click", e => { e.stopPropagation(); trashCard(proj.id); });
+      tdDelete.appendChild(delBtn);
     }
-    const delBtn = document.createElement("button");
-    delBtn.className = "table-delete";
-    delBtn.title = T("trashTitle");
-    delBtn.setAttribute("aria-label", T("trashTitle"));
-    delBtn.textContent = "✕";
-    delBtn.addEventListener("click", e => { e.stopPropagation(); trashCard(proj.id); });
-    tdDelete.appendChild(delBtn);
     tr.appendChild(tdDelete);
 
     tbody.appendChild(tr);
@@ -4484,6 +4626,7 @@ function renderTableView(projects) {
 }
 
 function deleteProject(id) {
+  if (!can("deleteProject")) return permissionDenied("Only admins can delete projects.");
   const proj = state.projects.find(p => p.id === id);
   if (!proj) return;
   if (confirm(`Permanently trash "${proj.name}"? This cannot be undone.`)) {
@@ -4500,6 +4643,7 @@ function deleteProject(id) {
 }
 
 function trashCard(id) {
+  if (!can("deleteProject")) return permissionDenied("Only admins can remove projects.");
   const proj = state.projects.find(p => p.id === id);
   if (!proj) return;
   if (proj.pile === "discard") {
@@ -4567,6 +4711,7 @@ function exportBackup() {
 }
 
 function importBackup(file) {
+  if (!can("import")) return permissionDenied("Only admins can import a backup.");
   const reader = new FileReader();
   reader.onload = () => {
     let parsed;
@@ -4622,7 +4767,7 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") closeDetail(
 
 detailTitle.addEventListener("input", () => {
   const proj = state.projects.find(p => p.id === openDetailId);
-  if (!proj) return;
+  if (!proj || !can("editProject", proj)) return;
   proj.name = detailTitle.value;
   applyBidi(detailTitle, detailTitle.value);
   saveState();
@@ -4632,7 +4777,7 @@ detailTitle.addEventListener("input", () => {
 });
 detailTitle.addEventListener("blur", () => {
   const proj = state.projects.find(p => p.id === openDetailId);
-  if (!proj) return;
+  if (!proj || !can("editProject", proj)) return;
   proj.name = detailTitle.value.trim() || "Untitled Project";
   detailTitle.value = proj.name;
   applyBidi(detailTitle, proj.name);
@@ -4693,17 +4838,20 @@ function renderDetail() {
     ribbon.textContent = "";
     ribbon.className = "modal-tier-ribbon";
   }
-  document.getElementById("detailDeleteBtn").textContent = T("trashBtn");
+  const delBtn = document.getElementById("detailDeleteBtn");
+  delBtn.textContent = T("trashBtn");
+  delBtn.style.display = can("deleteProject") ? "" : "none";
 
   detailTitle.value = proj.name;
+  detailTitle.readOnly = !can("editProject", proj);
   applyBidi(detailTitle, proj.name);
   detailBody.innerHTML = "";
   detailBody.appendChild(renderStepper(proj));
-  detailBody.appendChild(renderPileControl(proj));
+  if (isAdmin()) detailBody.appendChild(renderPileControl(proj));
 
   const stack = document.createElement("div");
   stack.className = "detail-stack";
-  stack.appendChild(renderAssignmentBox(proj));
+  if (isAdmin()) stack.appendChild(renderAssignmentBox(proj));
   stack.appendChild(renderQuestLog(proj));
   stack.appendChild(renderProjectNotesBox(proj));
   stack.appendChild(renderMapBox(proj));
@@ -4715,6 +4863,7 @@ function renderDetail() {
 function renderCommentsBox(proj) {
   const box = document.createElement("div");
   box.className = "section-box";
+  const editable = isAdmin();
   const h4 = document.createElement("h4");
   h4.textContent = "💬 Comments";
   box.appendChild(h4);
@@ -4739,13 +4888,15 @@ function renderCommentsBox(proj) {
       time.textContent = timeAgo(c.ts);
       time.title = new Date(c.ts).toLocaleString();
       head.appendChild(time);
-      const del = document.createElement("button");
-      del.className = "comment-delete";
-      del.textContent = "✕";
-      del.title = "Delete comment";
-      del.setAttribute("aria-label", "Delete comment");
-      del.addEventListener("click", () => { proj.comments.splice(realIdx, 1); persistAndRefresh(); });
-      head.appendChild(del);
+      if (editable) {
+        const del = document.createElement("button");
+        del.className = "comment-delete";
+        del.textContent = "✕";
+        del.title = "Delete comment";
+        del.setAttribute("aria-label", "Delete comment");
+        del.addEventListener("click", () => { proj.comments.splice(realIdx, 1); persistAndRefresh(); });
+        head.appendChild(del);
+      }
       el.appendChild(head);
       const body = document.createElement("div");
       body.className = "comment-body";
@@ -4757,28 +4908,35 @@ function renderCommentsBox(proj) {
     box.appendChild(list);
   }
 
-  const inputRow = document.createElement("div");
-  inputRow.className = "item-input";
-  const ta = document.createElement("textarea");
-  ta.className = "note-input";
-  ta.rows = 2;
-  ta.placeholder = "Write a comment...";
-  ta.dir = "auto";
-  const addBtn = document.createElement("button");
-  addBtn.className = "btn small-btn";
-  addBtn.textContent = "Post";
-  function addComment() {
-    const v = ta.value.trim();
-    if (!v) return;
-    proj.comments.push({ user: currentUserLabel, text: v, ts: Date.now() });
-    ta.value = "";
-    persistAndRefresh();
+  if (editable) {
+    const inputRow = document.createElement("div");
+    inputRow.className = "item-input";
+    const ta = document.createElement("textarea");
+    ta.className = "note-input";
+    ta.rows = 2;
+    ta.placeholder = "Write a comment...";
+    ta.dir = "auto";
+    const addBtn = document.createElement("button");
+    addBtn.className = "btn small-btn";
+    addBtn.textContent = "Post";
+    function addComment() {
+      const v = ta.value.trim();
+      if (!v) return;
+      proj.comments.push({ user: currentUserLabel, text: v, ts: Date.now() });
+      ta.value = "";
+      persistAndRefresh();
+    }
+    addBtn.addEventListener("click", addComment);
+    ta.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); addComment(); } });
+    inputRow.appendChild(ta);
+    inputRow.appendChild(addBtn);
+    box.appendChild(inputRow);
+  } else if (proj.comments.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "missions-empty";
+    empty.textContent = "No comments yet.";
+    box.appendChild(empty);
   }
-  addBtn.addEventListener("click", addComment);
-  ta.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); addComment(); } });
-  inputRow.appendChild(ta);
-  inputRow.appendChild(addBtn);
-  box.appendChild(inputRow);
 
   return box;
 }
@@ -4880,25 +5038,30 @@ function persistAndRefresh() {
 function renderStepper(proj) {
   const stepper = document.createElement("div");
   stepper.className = "stepper";
+  const editable = can("changeStatus");
   STAGES.forEach((stage, i) => {
     const step = document.createElement("div");
     step.className = "step" + (i < proj.statusIndex ? " done" : i === proj.statusIndex ? " active" : "");
+    if (!editable) step.style.cursor = "default";
     const dotBg = i <= proj.statusIndex ? stage.color : "var(--card-bg)";
     const dotBorder = i <= proj.statusIndex ? stage.color : "var(--border)";
     step.innerHTML = `<div class="dot" style="background:${dotBg};border-color:${dotBorder}">${i < proj.statusIndex ? "&#10003;" : i + 1}</div><div class="label">${stage.name}</div>`;
-    step.addEventListener("click", () => {
-      if (proj.statusIndex !== i) {
-        proj.statusIndex = i;
-        logActivity('set "' + proj.name + '" to ' + stage.name, proj.id);
-      }
-      persistAndRefresh();
-    });
+    if (editable) {
+      step.addEventListener("click", () => {
+        if (proj.statusIndex !== i) {
+          proj.statusIndex = i;
+          logActivity('set "' + proj.name + '" to ' + stage.name, proj.id);
+        }
+        persistAndRefresh();
+      });
+    }
     stepper.appendChild(step);
   });
   return stepper;
 }
 
-function buildNoteEntry(note, refresh, remove) {
+function buildNoteEntry(note, refresh, remove, editable) {
+  if (editable === undefined) editable = true;
   const entry = document.createElement("div");
   entry.className = "note-entry";
 
@@ -4908,11 +5071,11 @@ function buildNoteEntry(note, refresh, remove) {
   entry.appendChild(icon);
 
   const text = document.createElement("div");
-  text.className = "note-text editable";
-  text.title = "Click to edit";
+  text.className = "note-text" + (editable ? " editable" : "");
+  if (editable) text.title = "Click to edit";
   text.textContent = note.text;
   applyBidi(text, note.text);
-  text.addEventListener("click", () => {
+  if (editable) text.addEventListener("click", () => {
     const textarea = document.createElement("textarea");
     textarea.className = "note-edit-input";
     textarea.value = note.text;
@@ -4941,13 +5104,15 @@ function buildNoteEntry(note, refresh, remove) {
   });
   entry.appendChild(text);
 
-  const delBtn = document.createElement("button");
-  delBtn.className = "note-delete";
-  delBtn.title = "Delete note";
-  delBtn.setAttribute("aria-label", "Delete note");
-  delBtn.textContent = "✕";
-  delBtn.addEventListener("click", remove);
-  entry.appendChild(delBtn);
+  if (editable) {
+    const delBtn = document.createElement("button");
+    delBtn.className = "note-delete";
+    delBtn.title = "Delete note";
+    delBtn.setAttribute("aria-label", "Delete note");
+    delBtn.textContent = "✕";
+    delBtn.addEventListener("click", remove);
+    entry.appendChild(delBtn);
+  }
 
   return entry;
 }
@@ -4955,39 +5120,42 @@ function buildNoteEntry(note, refresh, remove) {
 function renderProjectNotesBox(proj) {
   const box = document.createElement("div");
   box.className = "section-box notes-box";
+  const editable = isAdmin();
   const h4 = document.createElement("h4");
   h4.textContent = "\u{1F4DC} Notes";
   box.appendChild(h4);
 
-  const inputRow = document.createElement("div");
-  inputRow.className = "item-input";
-  const textarea = document.createElement("textarea");
-  textarea.className = "note-input";
-  textarea.rows = 2;
-  textarea.placeholder = "Write a note...";
-  textarea.dir = "auto";
-  const addBtn = document.createElement("button");
-  addBtn.className = "btn small-btn";
-  addBtn.textContent = "Add";
-  function addNote() {
-    const val = textarea.value.trim();
-    if (!val) return;
-    proj.notes.push({ text: val });
-    textarea.value = "";
-    persistAndRefresh();
+  if (editable) {
+    const inputRow = document.createElement("div");
+    inputRow.className = "item-input";
+    const textarea = document.createElement("textarea");
+    textarea.className = "note-input";
+    textarea.rows = 2;
+    textarea.placeholder = "Write a note...";
+    textarea.dir = "auto";
+    const addBtn = document.createElement("button");
+    addBtn.className = "btn small-btn";
+    addBtn.textContent = "Add";
+    function addNote() {
+      const val = textarea.value.trim();
+      if (!val) return;
+      proj.notes.push({ text: val });
+      textarea.value = "";
+      persistAndRefresh();
+    }
+    addBtn.addEventListener("click", addNote);
+    textarea.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); addNote(); }
+    });
+    inputRow.appendChild(textarea);
+    inputRow.appendChild(addBtn);
+    box.appendChild(inputRow);
   }
-  addBtn.addEventListener("click", addNote);
-  textarea.addEventListener("keydown", e => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); addNote(); }
-  });
-  inputRow.appendChild(textarea);
-  inputRow.appendChild(addBtn);
-  box.appendChild(inputRow);
 
   if (proj.notes.length === 0) {
     const empty = document.createElement("div");
     empty.className = "missions-empty";
-    empty.textContent = "\u{1F4DC} No notes yet. Add one above.";
+    empty.textContent = "\u{1F4DC} No notes yet.";
     box.appendChild(empty);
   } else {
     const list = document.createElement("div");
@@ -4996,7 +5164,8 @@ function renderProjectNotesBox(proj) {
       list.appendChild(buildNoteEntry(
         note,
         () => persistAndRefresh(),
-        () => { proj.notes.splice(idx, 1); persistAndRefresh(); }
+        () => { proj.notes.splice(idx, 1); persistAndRefresh(); },
+        editable
       ));
     });
     box.appendChild(list);
@@ -5008,32 +5177,43 @@ function renderProjectNotesBox(proj) {
 function renderQuestLog(proj) {
   const box = document.createElement("div");
   box.className = "section-box quest-log-box";
+  const editable = canEditTodos(proj);
   const h4 = document.createElement("h4");
   h4.textContent = T("todosLogTitle");
   box.appendChild(h4);
 
-  const inputRow = document.createElement("div");
-  inputRow.className = "item-input";
-  const input = document.createElement("input");
-  input.type = "text";
-  input.placeholder = T("todoAdd");
-  input.dir = "auto";
-  const addBtn = document.createElement("button");
-  addBtn.className = "btn small-btn";
-  addBtn.textContent = "Add";
-  function addQuest() {
-    const val = input.value.trim();
-    if (!val) return;
-    proj.todos.push({ text: val, description: "", subs: [], done: false, assignee: "", dueDate: "" });
-    logActivity('added ' + (isFantasy() ? "quest" : "to-do") + ' "' + val + '" to "' + proj.name + '"', proj.id);
-    input.value = "";
-    persistAndRefresh();
+  if (editable) {
+    const inputRow = document.createElement("div");
+    inputRow.className = "item-input";
+    const input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = T("todoAdd");
+    input.dir = "auto";
+    const addBtn = document.createElement("button");
+    addBtn.className = "btn small-btn";
+    addBtn.textContent = "Add";
+    function addQuest() {
+      if (!canEditTodos(proj)) return permissionDenied();
+      const val = input.value.trim();
+      if (!val) return;
+      proj.todos.push({ text: val, description: "", subs: [], done: false, assignee: "", dueDate: "" });
+      logActivity('added ' + (isFantasy() ? "quest" : "to-do") + ' "' + val + '" to "' + proj.name + '"', proj.id);
+      input.value = "";
+      persistAndRefresh();
+    }
+    addBtn.addEventListener("click", addQuest);
+    input.addEventListener("keydown", e => { if (e.key === "Enter") addQuest(); });
+    inputRow.appendChild(input);
+    inputRow.appendChild(addBtn);
+    box.appendChild(inputRow);
+  } else {
+    const ro = document.createElement("div");
+    ro.className = "team-note";
+    ro.textContent = currentRole() === "todo-service"
+      ? "You can edit to-dos only on projects that are At Service."
+      : "You have read-only access to this project.";
+    box.appendChild(ro);
   }
-  addBtn.addEventListener("click", addQuest);
-  input.addEventListener("keydown", e => { if (e.key === "Enter") addQuest(); });
-  inputRow.appendChild(input);
-  inputRow.appendChild(addBtn);
-  box.appendChild(inputRow);
 
   if (proj.todos.length === 0) {
     const empty = document.createElement("div");
@@ -5055,6 +5235,7 @@ function renderQuestLog(proj) {
 const collapsedQuests = new WeakSet();
 
 function renderQuestCard(proj, quest, idx) {
+  const editable = canEditTodos(proj);
   const card = document.createElement("div");
   const collapsed = collapsedQuests.has(quest);
   card.className = "quest-card" + (quest.done ? " done" : "") + (collapsed ? " collapsed" : "");
@@ -5088,21 +5269,28 @@ function renderQuestCard(proj, quest, idx) {
   toggle.className = "entry-toggle quest-seal";
   toggle.setAttribute("aria-label", quest.done ? "Mark incomplete" : "Mark complete");
   toggle.textContent = quest.done ? "✓" : "";
-  toggle.addEventListener("click", () => {
-    quest.done = !quest.done;
-    logActivity((quest.done ? "completed " : "reopened ") + (isFantasy() ? "quest" : "to-do") + ' "' + quest.text + '" on "' + proj.name + '"', proj.id);
-    persistAndRefresh();
-  });
+  if (editable) {
+    toggle.addEventListener("click", () => {
+      quest.done = !quest.done;
+      logActivity((quest.done ? "completed " : "reopened ") + (isFantasy() ? "quest" : "to-do") + ' "' + quest.text + '" on "' + proj.name + '"', proj.id);
+      persistAndRefresh();
+    });
+  } else {
+    toggle.disabled = true;
+    toggle.style.cursor = "default";
+  }
   head.appendChild(toggle);
 
   const name = document.createElement("span");
-  name.className = "quest-name text editable";
+  name.className = "quest-name text" + (editable ? " editable" : "");
   name.textContent = quest.text;
-  name.title = "Click to edit quest name";
   applyBidi(name, quest.text);
-  name.addEventListener("click", () =>
-    startInlineEdit(head, name, quest.text, (v) => { quest.text = v; persistAndRefresh(); })
-  );
+  if (editable) {
+    name.title = "Click to edit quest name";
+    name.addEventListener("click", () =>
+      startInlineEdit(head, name, quest.text, (v) => { quest.text = v; persistAndRefresh(); })
+    );
+  }
   head.appendChild(name);
 
   if (quest.subs.length) {
@@ -5140,24 +5328,27 @@ function renderQuestCard(proj, quest, idx) {
   }
   if (headBadges.childNodes.length) head.appendChild(headBadges);
 
-  const del = document.createElement("button");
-  del.className = "entry-delete";
-  del.title = "Delete quest";
-  del.setAttribute("aria-label", "Delete quest");
-  del.textContent = "✕";
-  del.addEventListener("click", () => {
-    logActivity('removed ' + (isFantasy() ? "quest" : "to-do") + ' "' + quest.text + '" from "' + proj.name + '"', proj.id);
-    proj.todos.splice(idx, 1);
-    persistAndRefresh();
-  });
-  head.appendChild(del);
+  if (editable) {
+    const del = document.createElement("button");
+    del.className = "entry-delete";
+    del.title = "Delete quest";
+    del.setAttribute("aria-label", "Delete quest");
+    del.textContent = "✕";
+    del.addEventListener("click", () => {
+      logActivity('removed ' + (isFantasy() ? "quest" : "to-do") + ' "' + quest.text + '" from "' + proj.name + '"', proj.id);
+      proj.todos.splice(idx, 1);
+      persistAndRefresh();
+    });
+    head.appendChild(del);
+  }
 
   card.appendChild(head);
 
   const desc = document.createElement("div");
-  desc.className = "quest-desc editable" + (quest.description ? "" : " empty");
-  desc.textContent = quest.description || "Add a description...";
+  desc.className = "quest-desc" + (editable ? " editable" : "") + (quest.description ? "" : " empty");
+  desc.textContent = quest.description || (editable ? "Add a description..." : "No description.");
   if (quest.description) applyBidi(desc, quest.description);
+  if (editable) {
   desc.title = "Click to edit description";
   desc.addEventListener("click", () => {
     const ta = document.createElement("textarea");
@@ -5180,9 +5371,11 @@ function renderQuestCard(proj, quest, idx) {
       else if (e.key === "Escape") { e.preventDefault(); finished = true; card.replaceChild(desc, ta); }
     });
   });
+  }
   card.appendChild(desc);
 
-  // Assignee + due date for this to-do.
+  // Assignee + due date for this to-do (editable only).
+  if (editable) {
   const meta = document.createElement("div");
   meta.className = "quest-meta";
   const qAssignee = document.createElement("input");
@@ -5219,6 +5412,7 @@ function renderQuestCard(proj, quest, idx) {
   });
   meta.appendChild(qDue);
   card.appendChild(meta);
+  }
 
   const subs = document.createElement("div");
   subs.className = "quest-subs";
@@ -5230,35 +5424,37 @@ function renderQuestCard(proj, quest, idx) {
       subList.appendChild(createEntryItem(
         sub,
         "var(--accent)",
-        () => { sub.done = !sub.done; persistAndRefresh(); },
-        () => { quest.subs.splice(sIdx, 1); persistAndRefresh(); },
-        (v) => { sub.text = v; persistAndRefresh(); }
+        editable ? () => { sub.done = !sub.done; persistAndRefresh(); } : null,
+        editable ? () => { quest.subs.splice(sIdx, 1); persistAndRefresh(); } : null,
+        editable ? (v) => { sub.text = v; persistAndRefresh(); } : null
       ));
     });
     subs.appendChild(subList);
   }
 
-  const subInputRow = document.createElement("div");
-  subInputRow.className = "item-input quest-sub-input";
-  const subInput = document.createElement("input");
-  subInput.type = "text";
-  subInput.placeholder = T("subAdd");
-  subInput.dir = "auto";
-  const subAdd = document.createElement("button");
-  subAdd.className = "btn secondary small-btn";
-  subAdd.textContent = "+ Sub";
-  function addSub() {
-    const val = subInput.value.trim();
-    if (!val) return;
-    quest.subs.push({ text: val, done: false });
-    subInput.value = "";
-    persistAndRefresh();
+  if (editable) {
+    const subInputRow = document.createElement("div");
+    subInputRow.className = "item-input quest-sub-input";
+    const subInput = document.createElement("input");
+    subInput.type = "text";
+    subInput.placeholder = T("subAdd");
+    subInput.dir = "auto";
+    const subAdd = document.createElement("button");
+    subAdd.className = "btn secondary small-btn";
+    subAdd.textContent = "+ Sub";
+    function addSub() {
+      const val = subInput.value.trim();
+      if (!val) return;
+      quest.subs.push({ text: val, done: false });
+      subInput.value = "";
+      persistAndRefresh();
+    }
+    subAdd.addEventListener("click", addSub);
+    subInput.addEventListener("keydown", e => { if (e.key === "Enter") addSub(); });
+    subInputRow.appendChild(subInput);
+    subInputRow.appendChild(subAdd);
+    subs.appendChild(subInputRow);
   }
-  subAdd.addEventListener("click", addSub);
-  subInput.addEventListener("keydown", e => { if (e.key === "Enter") addSub(); });
-  subInputRow.appendChild(subInput);
-  subInputRow.appendChild(subAdd);
-  subs.appendChild(subInputRow);
 
   card.appendChild(subs);
   return card;
@@ -5282,6 +5478,8 @@ function renderMapBox(proj) {
     placeholder.textContent = "No map image uploaded yet.";
     box.appendChild(placeholder);
   }
+
+  if (!isAdmin()) return box; // viewers/to-do editors: read-only map
 
   const controls = document.createElement("div");
   controls.className = "map-controls";
@@ -5326,7 +5524,8 @@ function createEntryItem(item, accentVar, onToggle, onDelete, onEdit) {
   toggle.className = "entry-toggle";
   toggle.setAttribute("aria-label", item.done ? "Mark incomplete" : "Mark complete");
   toggle.textContent = item.done ? "✓" : "";
-  toggle.addEventListener("click", onToggle);
+  if (onToggle) toggle.addEventListener("click", onToggle);
+  else { toggle.disabled = true; toggle.style.cursor = "default"; }
   li.appendChild(toggle);
 
   const span = document.createElement("span");
@@ -5340,13 +5539,15 @@ function createEntryItem(item, accentVar, onToggle, onDelete, onEdit) {
   }
   li.appendChild(span);
 
-  const delBtn = document.createElement("button");
-  delBtn.className = "entry-delete";
-  delBtn.title = "Delete";
-  delBtn.setAttribute("aria-label", "Delete");
-  delBtn.textContent = "✕";
-  delBtn.addEventListener("click", onDelete);
-  li.appendChild(delBtn);
+  if (onDelete) {
+    const delBtn = document.createElement("button");
+    delBtn.className = "entry-delete";
+    delBtn.title = "Delete";
+    delBtn.setAttribute("aria-label", "Delete");
+    delBtn.textContent = "✕";
+    delBtn.addEventListener("click", onDelete);
+    li.appendChild(delBtn);
+  }
 
   return li;
 }
@@ -5415,29 +5616,32 @@ function renderMissionsPanel() {
 
   const body = document.createElement("div");
   body.className = "missions-body";
+  const editable = isAdmin();
 
-  const inputRow = document.createElement("div");
-  inputRow.className = "item-input";
-  const input = document.createElement("input");
-  input.type = "text";
-  input.placeholder = T("missionAdd");
-  input.dir = "auto";
-  const addBtn = document.createElement("button");
-  addBtn.className = "btn small-btn";
-  addBtn.textContent = "Add";
-  function addMission() {
-    const val = input.value.trim();
-    if (!val) return;
-    state.globalMissions.push({ text: val, done: false });
-    input.value = "";
-    saveState();
-    renderMissionsPanel();
+  if (editable) {
+    const inputRow = document.createElement("div");
+    inputRow.className = "item-input";
+    const input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = T("missionAdd");
+    input.dir = "auto";
+    const addBtn = document.createElement("button");
+    addBtn.className = "btn small-btn";
+    addBtn.textContent = "Add";
+    function addMission() {
+      const val = input.value.trim();
+      if (!val) return;
+      state.globalMissions.push({ text: val, done: false });
+      input.value = "";
+      saveState();
+      renderMissionsPanel();
+    }
+    addBtn.addEventListener("click", addMission);
+    input.addEventListener("keydown", e => { if (e.key === "Enter") addMission(); });
+    inputRow.appendChild(input);
+    inputRow.appendChild(addBtn);
+    body.appendChild(inputRow);
   }
-  addBtn.addEventListener("click", addMission);
-  input.addEventListener("keydown", e => { if (e.key === "Enter") addMission(); });
-  inputRow.appendChild(input);
-  inputRow.appendChild(addBtn);
-  body.appendChild(inputRow);
 
   if (state.globalMissions.length === 0) {
     const empty = document.createElement("div");
@@ -5451,9 +5655,9 @@ function renderMissionsPanel() {
       const li = createEntryItem(
         m,
         "var(--accent)",
-        () => { m.done = !m.done; saveState(); renderMissionsPanel(); },
-        () => { state.globalMissions.splice(idx, 1); saveState(); renderMissionsPanel(); },
-        (newText) => { m.text = newText; saveState(); renderMissionsPanel(); }
+        editable ? () => { m.done = !m.done; saveState(); renderMissionsPanel(); } : null,
+        editable ? () => { state.globalMissions.splice(idx, 1); saveState(); renderMissionsPanel(); } : null,
+        editable ? (newText) => { m.text = newText; saveState(); renderMissionsPanel(); } : null
       );
       list.appendChild(li);
     });
@@ -5637,19 +5841,21 @@ function renderActivityPanel() {
     });
     body.appendChild(list);
 
-    const clearRow = document.createElement("div");
-    clearRow.className = "activity-clear";
-    const clearBtn = document.createElement("button");
-    clearBtn.className = "btn secondary small-btn";
-    clearBtn.textContent = "Clear activity log";
-    clearBtn.addEventListener("click", () => {
-      if (!confirm("Clear the activity log for everyone? This cannot be undone.")) return;
-      state.activity = [];
-      saveState();
-      renderActivityPanel();
-    });
-    clearRow.appendChild(clearBtn);
-    body.appendChild(clearRow);
+    if (isAdmin()) {
+      const clearRow = document.createElement("div");
+      clearRow.className = "activity-clear";
+      const clearBtn = document.createElement("button");
+      clearBtn.className = "btn secondary small-btn";
+      clearBtn.textContent = "Clear activity log";
+      clearBtn.addEventListener("click", () => {
+        if (!confirm("Clear the activity log for everyone? This cannot be undone.")) return;
+        state.activity = [];
+        saveState();
+        renderActivityPanel();
+      });
+      clearRow.appendChild(clearBtn);
+      body.appendChild(clearRow);
+    }
   }
 
   panel.appendChild(body);
@@ -5688,37 +5894,40 @@ function renderNotesPanel() {
 
   const body = document.createElement("div");
   body.className = "missions-body";
+  const editable = isAdmin();
 
-  const inputRow = document.createElement("div");
-  inputRow.className = "item-input";
-  const textarea = document.createElement("textarea");
-  textarea.className = "note-input";
-  textarea.rows = 2;
-  textarea.placeholder = "Write a note...";
-  textarea.dir = "auto";
-  const addBtn = document.createElement("button");
-  addBtn.className = "btn small-btn";
-  addBtn.textContent = "Add";
-  function addNote() {
-    const val = textarea.value.trim();
-    if (!val) return;
-    state.generalNotes.push({ text: val });
-    textarea.value = "";
-    saveState();
-    renderNotesPanel();
+  if (editable) {
+    const inputRow = document.createElement("div");
+    inputRow.className = "item-input";
+    const textarea = document.createElement("textarea");
+    textarea.className = "note-input";
+    textarea.rows = 2;
+    textarea.placeholder = "Write a note...";
+    textarea.dir = "auto";
+    const addBtn = document.createElement("button");
+    addBtn.className = "btn small-btn";
+    addBtn.textContent = "Add";
+    function addNote() {
+      const val = textarea.value.trim();
+      if (!val) return;
+      state.generalNotes.push({ text: val });
+      textarea.value = "";
+      saveState();
+      renderNotesPanel();
+    }
+    addBtn.addEventListener("click", addNote);
+    textarea.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); addNote(); }
+    });
+    inputRow.appendChild(textarea);
+    inputRow.appendChild(addBtn);
+    body.appendChild(inputRow);
   }
-  addBtn.addEventListener("click", addNote);
-  textarea.addEventListener("keydown", e => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); addNote(); }
-  });
-  inputRow.appendChild(textarea);
-  inputRow.appendChild(addBtn);
-  body.appendChild(inputRow);
 
   if (state.generalNotes.length === 0) {
     const empty = document.createElement("div");
     empty.className = "missions-empty";
-    empty.textContent = "\u{1F4DC} No notes yet. Add one above.";
+    empty.textContent = "\u{1F4DC} No notes yet.";
     body.appendChild(empty);
   } else {
     const list = document.createElement("div");
@@ -5727,7 +5936,8 @@ function renderNotesPanel() {
       list.appendChild(buildNoteEntry(
         note,
         () => { saveState(); renderNotesPanel(); },
-        () => { state.generalNotes.splice(idx, 1); saveState(); renderNotesPanel(); }
+        () => { state.generalNotes.splice(idx, 1); saveState(); renderNotesPanel(); },
+        editable
       ));
     });
     body.appendChild(list);
@@ -5829,6 +6039,7 @@ function clearSelection() {
   updateBulkBar();
 }
 function setSelectMode(on) {
+  if (on && !isAdmin()) return permissionDenied("Only admins can bulk-edit.");
   selectMode = on;
   if (!on) selectedIds.clear();
   const btn = document.getElementById("selectModeBtn");
@@ -5918,6 +6129,133 @@ document.addEventListener("keydown", e => {
   else if (e.key === "n" || e.key === "N") { e.preventDefault(); openAddBar(); }
   else if (e.key === "s" || e.key === "S") { e.preventDefault(); setSelectMode(!selectMode); }
 });
+
+/* ---------- Team & roles admin ---------- */
+const teamOverlay = document.getElementById("teamOverlay");
+function openTeam() {
+  if (!isAdmin()) return permissionDenied("Only admins can manage the team.");
+  renderTeamModal();
+  teamOverlay.classList.add("visible");
+}
+function closeTeam() { teamOverlay.classList.remove("visible"); }
+
+function roleSelectEl(value, onChange, disabled) {
+  const sel = document.createElement("select");
+  Object.keys(ROLE_LABELS).forEach(r => {
+    const o = document.createElement("option");
+    o.value = r; o.textContent = ROLE_LABELS[r];
+    if (r === value) o.selected = true;
+    sel.appendChild(o);
+  });
+  sel.disabled = !!disabled;
+  sel.addEventListener("change", () => onChange(sel.value));
+  return sel;
+}
+
+function renderTeamModal() {
+  const body = document.getElementById("teamBody");
+  body.innerHTML = "";
+  if (!state.roles || typeof state.roles !== "object") state.roles = {};
+
+  const note = document.createElement("div");
+  note.className = "team-note";
+  note.innerHTML = "Assign a role to each teammate's <strong>login email</strong>. Anyone not listed is a <strong>Viewer</strong> (read-only). "
+    + "These are in-app guardrails for a trusted team — not un-bypassable security.";
+  body.appendChild(note);
+
+  const emails = new Set();
+  BOOTSTRAP_ADMINS.forEach(e => emails.add(e.toLowerCase()));
+  Object.keys(state.roles).forEach(e => emails.add(e.toLowerCase()));
+
+  [...emails].sort().forEach(email => {
+    const locked = BOOTSTRAP_ADMINS.includes(email);
+    const role = locked ? "admin" : (state.roles[email] || "viewer");
+    const row = document.createElement("div");
+    row.className = "team-row";
+    const em = document.createElement("span");
+    em.className = "team-email";
+    em.textContent = email;
+    if (email === (currentUserEmail || "").toLowerCase()) {
+      const you = document.createElement("span");
+      you.className = "team-you";
+      you.textContent = " (you)";
+      em.appendChild(you);
+    }
+    row.appendChild(em);
+
+    row.appendChild(roleSelectEl(role, (newRole) => {
+      state.roles[email] = newRole;
+      logActivity("set role of " + email + " to " + ROLE_LABELS[newRole]);
+      saveState();
+      applyRoleUI();
+      renderAllForPermissions();
+    }, locked));
+
+    if (!locked) {
+      const rm = document.createElement("button");
+      rm.className = "btn secondary small-btn";
+      rm.textContent = "Remove";
+      rm.addEventListener("click", () => {
+        delete state.roles[email];
+        logActivity("removed " + email + " from the team");
+        saveState();
+        renderTeamModal();
+        applyRoleUI();
+        renderAllForPermissions();
+      });
+      row.appendChild(rm);
+    } else {
+      const lock = document.createElement("span");
+      lock.className = "team-you";
+      lock.textContent = "locked admin";
+      row.appendChild(lock);
+    }
+    body.appendChild(row);
+  });
+
+  // Add-member row
+  const add = document.createElement("div");
+  add.className = "team-add";
+  const emailInput = document.createElement("input");
+  emailInput.type = "email";
+  emailInput.placeholder = "teammate@email.com";
+  emailInput.dir = "ltr";
+  const roleSel = roleSelectEl("viewer", () => {}, false);
+  const addBtn = document.createElement("button");
+  addBtn.className = "btn small-btn";
+  addBtn.textContent = "Add member";
+  function addMember() {
+    const email = emailInput.value.trim().toLowerCase();
+    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { emailInput.focus(); return; }
+    state.roles[email] = roleSel.value;
+    logActivity("added " + email + " as " + ROLE_LABELS[roleSel.value]);
+    saveState();
+    emailInput.value = "";
+    renderTeamModal();
+    applyRoleUI();
+    renderAllForPermissions();
+  }
+  addBtn.addEventListener("click", addMember);
+  emailInput.addEventListener("keydown", e => { if (e.key === "Enter") addMember(); });
+  add.appendChild(emailInput);
+  add.appendChild(roleSel);
+  add.appendChild(addBtn);
+  body.appendChild(add);
+}
+
+// Re-render the whole app after a permission-relevant change.
+function renderAllForPermissions() {
+  renderToolbar();
+  renderMissionsPanel();
+  renderNotesPanel();
+  renderActivityPanel();
+  renderAll();
+  if (openDetailId) renderDetail();
+}
+
+document.getElementById("teamBtn").addEventListener("click", openTeam);
+document.getElementById("teamCloseBtn").addEventListener("click", closeTeam);
+teamOverlay.addEventListener("click", e => { if (e.target === teamOverlay) closeTeam(); });
 
 // Login gate wiring.
 document.getElementById("authSignInBtn").addEventListener("click", doSignIn);

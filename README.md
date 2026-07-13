@@ -82,6 +82,29 @@ Now when anyone opens the app they get a **Sign in** screen. Only the accounts
 you created can get in; everyone else is locked out even though the code and
 key are public. There's a **🚪 Sign out** button in the footer.
 
+## 4. Roles & permissions
+
+Admins can restrict what each teammate may do. Open the **👥 Team** button in
+the footer (admins only) and assign a role to each login email:
+
+- **Admin** — full access.
+- **To-do editor — all projects** — may add/complete/edit/delete **to-dos** on
+  any project; cannot add/delete projects, change status, edit notes, etc.
+- **To-do editor — At Service only** — same, but only on projects whose status
+  is **At Service**.
+- **Viewer** — read-only.
+
+Anyone not listed is a **Viewer**. The admin email(s) are set in `index.html`
+via `BOOTSTRAP_ADMINS` (so you can't lock yourself out); the current owner is
+`razcohen7676@gmail.com`.
+
+> **Important — this is a guardrail, not un-bypassable security.** Roles are
+> enforced in the app (buttons hidden + actions refused), which is perfect for
+> a *trusted* team. But because the database still accepts writes from any
+> signed-in user, a determined, technical user could bypass the UI. Truly
+> tamper-proof permissions require server-side (database) rules, which is a
+> larger rebuild — ask if you need it.
+
 ### What is and isn't shared
 
 - **Shared across everyone:** projects, their status/quests/sub-missions/notes/
