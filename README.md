@@ -167,6 +167,8 @@ plain in-memory `state` object and calls `saveState()`.
   to-do, so deadlines still surface at a glance.
 - **Comments & history:** each project's detail view has a comment thread and a
   history of changes made to it.
+- **Undo:** most actions (delete a project, change status, delete a to-do/note/
+  comment/mission, bulk edits, import) show a one-click **Undo** toast.
 - **Keyboard shortcuts:** `/` focuses search, `n` starts a new project, `s`
   toggles multi-select, `Esc` closes a dialog / exits select mode.
 - **Bulk edits:** click **☑️ Select**, tick several projects, then set their

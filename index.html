@@ -1824,6 +1824,53 @@
   }
   input[type="file"] { font-size: 13px; }
 
+  /* Themed dialogs (in-app alert/confirm) */
+  .dialog-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 400;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(12, 14, 20, 0.55);
+  }
+  .dialog-box {
+    width: 100%;
+    max-width: 420px;
+    background: var(--card-bg);
+    color: var(--text);
+    border: 2px solid var(--gold);
+    border-radius: 12px;
+    padding: 20px 22px 18px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+    animation: toastIn 0.16s ease;
+  }
+  .dialog-title {
+    margin: 0 0 8px;
+    font-family: var(--font-display);
+    font-size: 17px;
+    color: var(--gold);
+  }
+  .dialog-message {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .dialog-actions .btn.danger-btn {
+    background: var(--danger);
+    color: #fff;
+    border-color: var(--danger);
+  }
+
   /* Toast (undo) notifications */
   .toast-container {
     position: fixed;
@@ -3187,7 +3234,7 @@ function loadState() {
       return parsed;
     } catch (e) {
       console.error("Your saved data exists but could not be loaded/migrated. It has NOT been erased.", e);
-      alert("Your saved project data could not be loaded due to an unexpected error, but it has NOT been deleted. Please tell the developer about this before doing anything else (do not clear browser data).");
+      showAlert({ title: "Could not load saved data", message: "Your saved project data could not be loaded due to an unexpected error, but it has NOT been deleted. Please tell the developer about this before doing anything else (do not clear browser data)." });
       // Bail out without touching localStorage — surface an empty, in-memory-only
       // state so the page still renders instead of crashing, but never persist it.
       return {
@@ -3306,7 +3353,7 @@ function saveState() {
   } catch (e) {
     // Likely quota exceeded (base64 images can be large in localStorage).
     console.error("Failed to save state (storage may be full):", e);
-    alert("Could not save changes — browser storage may be full (this can happen with large images).");
+    showAlert({ title: "Could not save", message: "Could not save changes — browser storage may be full (this can happen with large images)." });
   }
   // Push the shared data to the cloud (no-op unless a backend is configured).
   schedulePush();
@@ -3475,6 +3522,74 @@ function showInfoToast(message) {
   toast.appendChild(msg);
   container.appendChild(toast);
   setTimeout(() => toast.remove(), 3500);
+}
+
+/* ---- Themed in-app dialogs (replace native alert/confirm) ---- */
+function showDialog(opts) {
+  // opts: { title, message, confirmText, cancelText, danger, alert }
+  return new Promise(resolve => {
+    const prevFocus = document.activeElement;
+    const overlay = document.createElement("div");
+    overlay.className = "dialog-overlay visible";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+
+    const box = document.createElement("div");
+    box.className = "dialog-box";
+
+    if (opts.title) {
+      const h = document.createElement("h3");
+      h.className = "dialog-title";
+      h.textContent = opts.title;
+      box.appendChild(h);
+    }
+    const msg = document.createElement("div");
+    msg.className = "dialog-message";
+    msg.textContent = opts.message || "";
+    box.appendChild(msg);
+
+    const actions = document.createElement("div");
+    actions.className = "dialog-actions";
+
+    let done = false;
+    function close(result) {
+      if (done) return;
+      done = true;
+      overlay.remove();
+      document.removeEventListener("keydown", onKey, true);
+      if (prevFocus && prevFocus.focus) { try { prevFocus.focus(); } catch (e) {} }
+      resolve(result);
+    }
+    function onKey(e) {
+      if (e.key === "Escape") { e.preventDefault(); close(false); }
+      else if (e.key === "Enter") { e.preventDefault(); close(true); }
+    }
+
+    if (!opts.alert) {
+      const cancel = document.createElement("button");
+      cancel.className = "btn secondary";
+      cancel.textContent = opts.cancelText || "Cancel";
+      cancel.addEventListener("click", () => close(false));
+      actions.appendChild(cancel);
+    }
+    const ok = document.createElement("button");
+    ok.className = "btn" + (opts.danger ? " danger-btn" : "");
+    ok.textContent = opts.confirmText || (opts.alert ? "OK" : "Confirm");
+    ok.addEventListener("click", () => close(true));
+    actions.appendChild(ok);
+
+    box.appendChild(actions);
+    overlay.appendChild(box);
+    overlay.addEventListener("click", e => { if (e.target === overlay && !opts.alert) close(false); });
+    document.addEventListener("keydown", onKey, true);
+    document.body.appendChild(overlay);
+    ok.focus();
+  });
+}
+function showConfirm(opts) { return showDialog(Object.assign({}, opts, { alert: false })); }
+function showAlert(opts) {
+  if (typeof opts === "string") opts = { message: opts };
+  return showDialog(Object.assign({}, opts, { alert: true }));
 }
 
 function logActivity(text, projectId) {
@@ -4134,7 +4249,7 @@ function setPile(proj, pile, sourceEl) {
   if (pile === "hand") {
     const handCount = state.projects.filter(p => getPile(p) === "hand" && p.id !== proj.id).length;
     if (handCount >= HAND_LIMIT) {
-      alert(T("handFull")(HAND_LIMIT));
+      showInfoToast(T("handFull")(HAND_LIMIT));
       return;
     }
   }
@@ -4424,10 +4539,10 @@ function renderKanbanView(projects) {
       if (!can("changeStatus")) return;
       const proj = state.projects.find(p => p.id === kanbanDragId);
       if (!proj || proj.statusIndex === i) return;
-      proj.statusIndex = i;
-      logActivity('set "' + proj.name + '" to ' + stage.name, proj.id);
-      saveState();
-      renderAll();
+      runUndoable('Moved "' + proj.name + '" to ' + stage.name + ".", () => {
+        proj.statusIndex = i;
+        logActivity('set "' + proj.name + '" to ' + stage.name, proj.id);
+      });
     });
 
     col.appendChild(body);
@@ -4801,21 +4916,24 @@ function renderTableView(projects) {
   return wrap;
 }
 
-function deleteProject(id) {
+async function deleteProject(id) {
   if (!can("deleteProject")) return permissionDenied("Only admins can delete projects.");
   const proj = state.projects.find(p => p.id === id);
   if (!proj) return;
-  if (confirm(`Permanently trash "${proj.name}"? This cannot be undone.`)) {
+  const name = proj.name;
+  const ok = await showConfirm({
+    title: "Delete forever?",
+    message: `Permanently delete "${name}"? This removes it for everyone.`,
+    confirmText: "Delete",
+    danger: true
+  });
+  if (!ok) return;
+  runUndoable('Deleted "' + name + '".', () => {
     state.projects = state.projects.filter(p => p.id !== id);
-    logActivity('permanently deleted "' + proj.name + '"', id);
-    saveState();
-    renderToolbar();
-    if (openDetailId === id) {
-      closeDetail();
-    } else {
-      renderAll();
-    }
-  }
+    logActivity('permanently deleted "' + name + '"', id);
+    if (openDetailId === id) openDetailId = null;
+  });
+  document.getElementById("detailOverlay").classList.remove("visible");
 }
 
 // Moves the project to the current user's own "Irrelevant" group (personal).
@@ -4869,6 +4987,52 @@ function showUndoToast(message, onUndo) {
   container.appendChild(toast);
 }
 
+/* ---- Single-level, snapshot-based Undo ----
+   Snapshots the shared data slices (not the UI/filters), runs the mutation,
+   and offers an Undo that restores the snapshot. Reused across actions. */
+function snapshotData() {
+  const clone = (v) => JSON.parse(JSON.stringify(v));
+  return {
+    projects: clone(state.projects),
+    globalMissions: clone(state.globalMissions),
+    generalNotes: clone(state.generalNotes),
+    activity: clone(state.activity),
+    roles: clone(state.roles || {}),
+    displayNames: clone(state.displayNames || {})
+  };
+}
+function restoreData(snap) {
+  state.projects = snap.projects;
+  state.globalMissions = snap.globalMissions;
+  state.generalNotes = snap.generalNotes;
+  state.activity = snap.activity;
+  state.roles = snap.roles;
+  state.displayNames = snap.displayNames;
+}
+function refreshAllViews() {
+  renderToolbar();
+  renderMissionsPanel();
+  renderNotesPanel();
+  renderActivityPanel();
+  renderAll();
+  if (openDetailId) {
+    if (state.projects.find(p => p.id === openDetailId)) renderDetail();
+    else closeDetail();
+  }
+}
+// Run a mutation with a one-click Undo toast.
+function runUndoable(message, mutateFn) {
+  const snap = snapshotData();
+  mutateFn();
+  saveState();
+  refreshAllViews();
+  showUndoToast(message, () => {
+    restoreData(snap);
+    saveState();
+    refreshAllViews();
+  });
+}
+
 function exportBackup() {
   const data = JSON.stringify(state, null, 2);
   const blob = new Blob([data], { type: "application/json" });
@@ -4885,32 +5049,40 @@ function exportBackup() {
 function importBackup(file) {
   if (!can("import")) return permissionDenied("Only admins can import a backup.");
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     let parsed;
     try {
       parsed = JSON.parse(reader.result);
     } catch (e) {
-      alert("That file is not valid JSON and could not be imported.");
+      showAlert({ title: "Import failed", message: "That file is not valid JSON and could not be imported." });
       return;
     }
     if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.projects)) {
-      alert("That file doesn't look like a Project Tracker backup.");
+      showAlert({ title: "Import failed", message: "That file doesn't look like a Project Tracker backup." });
       return;
     }
-    if (!confirm("Importing will replace ALL current projects, missions, and notes with the contents of this backup. This cannot be undone. Continue?")) {
-      return;
-    }
+    const ok = await showConfirm({
+      title: "Import backup?",
+      message: "Importing replaces ALL current projects, missions and notes with this backup.",
+      confirmText: "Import",
+      danger: true
+    });
+    if (!ok) return;
+    const before = JSON.parse(JSON.stringify(state));
     state = migrateState(parsed);
     saveState();
     closeDetail();
-    renderToolbar();
-    renderMissionsPanel();
-    renderNotesPanel();
-    renderActivityPanel();
-    renderAll();
-    alert("Backup imported successfully.");
+    refreshAllViews();
+    showUndoToast("Backup imported.", () => {
+      state = before;
+      saveState();
+      applyTheme();
+      applySkin();
+      closeDetail();
+      refreshAllViews();
+    });
   };
-  reader.onerror = () => alert("Could not read that file.");
+  reader.onerror = () => showAlert({ title: "Import failed", message: "Could not read that file." });
   reader.readAsText(file);
 }
 
@@ -5068,7 +5240,7 @@ function renderCommentsBox(proj) {
         del.textContent = "✕";
         del.title = "Delete comment";
         del.setAttribute("aria-label", "Delete comment");
-        del.addEventListener("click", () => { proj.comments.splice(realIdx, 1); persistAndRefresh(); });
+        del.addEventListener("click", () => { runUndoable("Comment deleted.", () => { proj.comments.splice(realIdx, 1); }); });
         head.appendChild(del);
       }
       el.appendChild(head);
@@ -5222,11 +5394,11 @@ function renderStepper(proj) {
     step.innerHTML = `<div class="dot" style="background:${dotBg};border-color:${dotBorder}">${i < proj.statusIndex ? "&#10003;" : i + 1}</div><div class="label">${stage.name}</div>`;
     if (editable) {
       step.addEventListener("click", () => {
-        if (proj.statusIndex !== i) {
+        if (proj.statusIndex === i) return;
+        runUndoable('Status set to ' + stage.name + ".", () => {
           proj.statusIndex = i;
           logActivity('set "' + proj.name + '" to ' + stage.name, proj.id);
-        }
-        persistAndRefresh();
+        });
       });
     }
     stepper.appendChild(step);
@@ -5338,7 +5510,7 @@ function renderProjectNotesBox(proj) {
       list.appendChild(buildNoteEntry(
         note,
         () => persistAndRefresh(),
-        () => { proj.notes.splice(idx, 1); persistAndRefresh(); },
+        () => { runUndoable("Note deleted.", () => { proj.notes.splice(idx, 1); }); },
         editable
       ));
     });
@@ -5509,9 +5681,10 @@ function renderQuestCard(proj, quest, idx) {
     del.setAttribute("aria-label", "Delete quest");
     del.textContent = "✕";
     del.addEventListener("click", () => {
-      logActivity('removed ' + (isFantasy() ? "quest" : "to-do") + ' "' + quest.text + '" from "' + proj.name + '"', proj.id);
-      proj.todos.splice(idx, 1);
-      persistAndRefresh();
+      runUndoable((isFantasy() ? "Quest" : "To-do") + " deleted.", () => {
+        logActivity('removed ' + (isFantasy() ? "quest" : "to-do") + ' "' + quest.text + '" from "' + proj.name + '"', proj.id);
+        proj.todos.splice(idx, 1);
+      });
     });
     head.appendChild(del);
   }
@@ -5832,7 +6005,7 @@ function renderMissionsPanel() {
         m,
         "var(--accent)",
         editable ? () => { m.done = !m.done; saveState(); renderMissionsPanel(); } : null,
-        editable ? () => { state.globalMissions.splice(idx, 1); saveState(); renderMissionsPanel(); } : null,
+        editable ? () => { runUndoable("Mission deleted.", () => { state.globalMissions.splice(idx, 1); }); } : null,
         editable ? (newText) => { m.text = newText; saveState(); renderMissionsPanel(); } : null
       );
       list.appendChild(li);
@@ -6058,11 +6231,15 @@ function renderActivityPanel() {
       const clearBtn = document.createElement("button");
       clearBtn.className = "btn secondary small-btn";
       clearBtn.textContent = "Clear activity log";
-      clearBtn.addEventListener("click", () => {
-        if (!confirm("Clear the activity log for everyone? This cannot be undone.")) return;
-        state.activity = [];
-        saveState();
-        renderActivityPanel();
+      clearBtn.addEventListener("click", async () => {
+        const ok = await showConfirm({
+          title: "Clear activity log?",
+          message: "Clear the activity log for everyone?",
+          confirmText: "Clear",
+          danger: true
+        });
+        if (!ok) return;
+        runUndoable("Activity log cleared.", () => { state.activity = []; });
       });
       clearRow.appendChild(clearBtn);
       body.appendChild(clearRow);
@@ -6149,7 +6326,7 @@ function renderNotesPanel() {
       list.appendChild(buildNoteEntry(
         note,
         () => { saveState(); renderNotesPanel(); },
-        () => { state.generalNotes.splice(idx, 1); saveState(); renderNotesPanel(); },
+        () => { runUndoable("Note deleted.", () => { state.generalNotes.splice(idx, 1); }); },
         editable
       ));
     });
@@ -6280,39 +6457,51 @@ function selectedProjects() {
 }
 function bulkApplyStatus(i) {
   const list = selectedProjects();
-  list.forEach(p => { p.statusIndex = i; });
-  logActivity("set " + list.length + " project" + (list.length === 1 ? "" : "s") + " to " + STAGES[i].name);
-  saveState();
+  if (!list.length) return;
+  const n = list.length;
+  runUndoable("Status changed for " + n + " project" + (n === 1 ? "" : "s") + ".", () => {
+    list.forEach(p => { p.statusIndex = i; });
+    logActivity("set " + n + " project" + (n === 1 ? "" : "s") + " to " + STAGES[i].name);
+  });
   clearSelection();
-  renderAll();
 }
 function bulkApplyPile(pile) {
   // Personal grouping (per-user) — not logged to the shared activity.
   const list = selectedProjects();
-  list.forEach(p => { setPileValue(p, pile); });
-  saveState();
+  if (!list.length) return;
+  const n = list.length;
+  runUndoable("Moved " + n + " project" + (n === 1 ? "" : "s") + ".", () => {
+    list.forEach(p => { setPileValue(p, pile); });
+  });
   clearSelection();
-  renderAll();
 }
 function bulkAssign(name) {
   const list = selectedProjects();
-  list.forEach(p => { p.assignee = name; });
-  logActivity((name ? ("assigned " + list.length + " project" + (list.length === 1 ? "" : "s") + " to " + name)
-                    : ("unassigned " + list.length + " project" + (list.length === 1 ? "" : "s"))));
-  saveState();
+  if (!list.length) return;
+  const n = list.length;
+  runUndoable((name ? "Assigned " : "Unassigned ") + n + " project" + (n === 1 ? "" : "s") + ".", () => {
+    list.forEach(p => { p.assignee = name; });
+    logActivity((name ? ("assigned " + n + " project" + (n === 1 ? "" : "s") + " to " + name)
+                      : ("unassigned " + n + " project" + (n === 1 ? "" : "s"))));
+  });
   clearSelection();
-  renderToolbar();
-  renderAll();
 }
-function bulkDelete() {
+async function bulkDelete() {
   const list = selectedProjects();
   if (list.length === 0) return;
-  if (!confirm("Move " + list.length + " project" + (list.length === 1 ? "" : "s") + " to your " + (isFantasy() ? "Discard" : "Irrelevant") + "?")) return;
-  list.forEach(p => { setPileValue(p, "discard"); });
-  saveState();
+  const n = list.length;
+  const ok = await showConfirm({
+    title: "Move to " + (isFantasy() ? "Discard" : "Irrelevant") + "?",
+    message: "Move " + n + " project" + (n === 1 ? "" : "s") + " to your " + (isFantasy() ? "Discard" : "Irrelevant") + " group?",
+    confirmText: "Move"
+  });
+  if (!ok) return;
+  runUndoable("Moved " + n + " project" + (n === 1 ? "" : "s") + " to " + (isFantasy() ? "Discard" : "Irrelevant") + ".", () => {
+    list.forEach(p => { setPileValue(p, "discard"); });
+  });
   clearSelection();
-  renderAll();
 }
+
 
 document.getElementById("selectModeBtn").addEventListener("click", () => setSelectMode(!selectMode));
 document.getElementById("bulkClearBtn").addEventListener("click", () => setSelectMode(false));
