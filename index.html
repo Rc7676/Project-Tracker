@@ -147,6 +147,15 @@
       max-height: none !important;
     }
     .toolbar-scroll { max-height: none !important; }
+    /* Pin the main column so every role gets the same width (admin-only
+       content like the Activity panel / long role-pill must not stretch it). */
+    .main-column { width: 100% !important; min-width: 0 !important; }
+    /* Smaller side padding on phones gives the grid room for 2 columns. */
+    body { padding: 12px !important; overflow-x: hidden; }
+    /* Reliable 2-up card grid down to ~320px-wide phones. */
+    .cards-grid { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)) !important; gap: 12px 10px !important; }
+    /* Keep the role pill from forcing horizontal overflow. */
+    .role-pill { white-space: normal !important; }
   }
   h1 {
     font-family: var(--font-display);
