@@ -768,8 +768,8 @@
   /* Cards view */
   .cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 18px 12px;
+    grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+    gap: 16px 12px;
     perspective: 1200px;
   }
   .project-card {
@@ -949,15 +949,16 @@
   .project-card .card-delete:hover { background: var(--danger); }
   .card-typeline {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
-    gap: 6px;
+    gap: 5px;
     padding-bottom: 7px;
     margin-bottom: 7px;
     border-bottom: 1px dashed var(--parch-edge);
     position: relative;
     z-index: 3;
   }
+  .card-rules { text-align: center; align-items: center; }
   .card-rules {
     background: var(--parch-rule-bg);
     border: 1px solid var(--parch-edge);
@@ -4708,18 +4709,20 @@ function renderCardsView(projects) {
       card.appendChild(tierBanner);
     }
 
+    // Category (Dolley/XY/Pinch) and status (At Service/Cycles/…) stacked.
     const typeline = document.createElement("div");
     typeline.className = "card-typeline";
     typeline.appendChild(categoryTagEl(proj.category));
     typeline.appendChild(statusPillEl(proj.statusIndex));
     card.appendChild(typeline);
 
+    // Notes, then To Do's.
     const doneCount = proj.todos.filter(t => t.done).length;
     const rules = document.createElement("div");
     rules.className = "card-rules";
     rules.innerHTML = `
-      <span class="rule-line">✅ ${doneCount}/${proj.todos.length} ${T("todosWord")} complete</span>
-      ${proj.notes.length ? `<span class="rule-line">\u{1F4DC} ${proj.notes.length} note${proj.notes.length === 1 ? "" : "s"}</span>` : ""}
+      <span class="rule-line">\u{1F4DC} ${proj.notes.length} note${proj.notes.length === 1 ? "" : "s"}</span>
+      <span class="rule-line">✅ ${doneCount}/${proj.todos.length} ${T("todosWord")}</span>
     `;
     card.appendChild(rules);
 
@@ -4732,17 +4735,6 @@ function renderCardsView(projects) {
       fill.style.width = pct + "%";
       prog.appendChild(fill);
       card.appendChild(prog);
-    }
-
-    const projDue = projectDueDate(proj);
-    if (proj.assignee || projDue) {
-      const meta = document.createElement("div");
-      meta.className = "card-meta";
-      if (proj.assignee) meta.appendChild(assigneeChipEl(proj.assignee));
-      else { const sp = document.createElement("span"); sp.className = "assignee-unassigned"; sp.textContent = "Unassigned"; meta.appendChild(sp); }
-      const due = dueBadgeEl(projDue);
-      if (due) meta.appendChild(due);
-      card.appendChild(meta);
     }
 
     if (proj.todos.length > 0) {
@@ -4774,11 +4766,6 @@ function renderCardsView(projects) {
       tooltip.appendChild(tooltipList);
       card.appendChild(tooltip);
     }
-
-    const leftBadge = document.createElement("div");
-    leftBadge.className = "card-stat-badge left";
-    leftBadge.textContent = `${doneCount}/${proj.todos.length}`;
-    card.appendChild(leftBadge);
 
     grid.appendChild(card);
   });
