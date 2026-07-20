@@ -162,8 +162,21 @@ plain in-memory `state` object and calls `saveState()`.
 
 ## Tips
 
-- **Views:** switch between **Cards**, **Table**, and **Kanban**. In Kanban,
-  drag a project card between stage columns to change its status.
+- **Views:** switch between **Cards**, **Table**, **Kanban**, **Timeline**, and
+  **Dashboard**. In Kanban, drag a project card between stage columns to change
+  its status. **Timeline** lays projects on a date axis by their to-do due dates
+  (with a "today" line); **Dashboard** shows KPI tiles and status/kind/assignee
+  breakdowns for whatever the current filters show.
+- **Command palette:** press **⌘K / Ctrl-K** (or `k`) to jump to any project or
+  run a command — switch views, add a project, export, toggle dark mode or
+  archived, open Team, sign out. Arrow keys to move, Enter to run, Esc to close.
+- **Archive vs. delete:** a project's detail view (and each table row) has an
+  **🗄 Archive** action — a shared "done / out of the way" state that hides the
+  project from the views but keeps it **searchable** and reversible
+  (**♻️ Unarchive**). A **Show archived** toggle appears in the filter bar when
+  any exist. *Delete forever* stays admin-only and permanent.
+- **CSV export:** **📄 Export CSV** downloads the currently filtered/sorted list
+  as a spreadsheet (opens cleanly in Excel/Sheets, UTF-8).
 - **Due dates live on to-dos:** each to-do has its own assignee and due date.
   A project's card/table/overdue view reflects the soonest upcoming (open)
   to-do, so deadlines still surface at a glance.
@@ -180,8 +193,9 @@ plain in-memory `state` object and calls `saveState()`.
   on). A loading skeleton appears while the shared workspace first loads.
 - **Undo:** most actions (delete a project, change status, delete a to-do/note/
   comment/mission, bulk edits, import) show a one-click **Undo** toast.
-- **Keyboard shortcuts:** `/` focuses search, `n` starts a new project, `s`
-  toggles multi-select, `Esc` closes a dialog / exits select mode.
+- **Keyboard shortcuts:** `⌘K`/`Ctrl-K` (or `k`) opens the command palette, `/`
+  focuses search, `n` starts a new project, `s` toggles multi-select, `Esc`
+  closes a dialog / palette / exits select mode.
 - **Bulk edits:** click **☑️ Select**, tick several projects, then set their
   status, assignee, or move/irrelevant them all at once.
 - **Filters:** on phones the filters collapse behind a **🔍 Filters & sort**

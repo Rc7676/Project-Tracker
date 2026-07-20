@@ -1157,6 +1157,48 @@
   .table-delete:hover { color: var(--danger); }
 
   /* Modal */
+  /* ---------- Command palette ---------- */
+  .palette-overlay {
+    position: fixed; inset: 0; z-index: 600;
+    background: rgba(12, 14, 20, 0.5);
+    display: none;
+    align-items: flex-start; justify-content: center;
+    padding: 12vh 16px 16px;
+  }
+  .palette-overlay.visible { display: flex; }
+  .palette {
+    width: 100%; max-width: 560px;
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 12px; box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+    overflow: hidden; display: flex; flex-direction: column;
+    max-height: 70vh;
+  }
+  .palette-input {
+    border: none; border-bottom: 1px solid var(--border);
+    padding: 16px 18px; font-size: 16px;
+    background: transparent; color: var(--text); outline: none;
+  }
+  .palette-results { overflow-y: auto; padding: 6px; }
+  .palette-item {
+    display: flex; align-items: center; gap: 11px;
+    padding: 9px 12px; border-radius: 8px; cursor: pointer;
+  }
+  .palette-item.active { background: var(--accent); }
+  .palette-item.active .palette-item-label,
+  .palette-item.active .palette-item-hint { color: #fff; }
+  .palette-item-icon { flex: 0 0 auto; font-size: 15px; width: 20px; text-align: center; }
+  .palette-item-label { flex: 1; font-size: 14px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .palette-item-hint { flex: 0 0 auto; font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .palette-empty { padding: 18px; text-align: center; color: var(--muted); font-size: 13.5px; }
+  .palette-foot {
+    display: flex; gap: 16px; padding: 8px 14px;
+    border-top: 1px solid var(--border); font-size: 11px; color: var(--muted);
+  }
+  .palette-foot kbd {
+    background: var(--row-hover); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 5px; font-size: 10.5px; margin-right: 2px;
+  }
+
   .modal-overlay {
     display: flex;
     position: fixed;
@@ -2434,6 +2476,52 @@
     cursor: pointer;
   }
   .filter-bar .clear-filters:hover { background: var(--row-hover); }
+  .filter-bar .archived-toggle {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    margin-left: auto;
+  }
+  .filter-bar .archived-toggle:hover { background: var(--row-hover); }
+  .filter-bar .archived-toggle.on { color: var(--accent); border-color: var(--accent); }
+
+  /* Archived project styling */
+  .archived-badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 1px 7px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--row-hover);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    vertical-align: middle;
+  }
+  .archived-row { opacity: 0.6; }
+  .archived-row:hover { opacity: 0.85; }
+  .project-card.archived-card { opacity: 0.62; filter: grayscale(0.35); }
+  .project-card.archived-card:hover { opacity: 0.92; filter: none; }
+  .modal-archive-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .modal-archive-btn:hover { background: var(--row-hover); color: var(--text); }
+
   .summary-overdue {
     cursor: pointer;
     color: #fff !important;
@@ -2658,6 +2746,81 @@
   .team-you { font-size: 11px; color: var(--accent); font-weight: 700; }
 
   /* ---- Kanban board view ---- */
+  /* ---------- Timeline / Gantt view ---------- */
+  .timeline-scroller { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--card-bg); }
+  .timeline-inner { position: relative; }
+  .timeline-header { display: flex; position: sticky; top: 0; z-index: 4; background: var(--card-bg); border-bottom: 1px solid var(--border); }
+  .timeline-corner {
+    position: sticky; left: 0; z-index: 5;
+    flex: 0 0 auto;
+    background: var(--card-bg);
+    border-right: 1px solid var(--border);
+    font-size: 11.5px; font-weight: 700; color: var(--muted);
+    display: flex; align-items: center; padding: 0 12px; height: 34px;
+    box-sizing: border-box;
+  }
+  .timeline-headtrack { position: relative; height: 34px; }
+  .timeline-month {
+    position: absolute; top: 0; height: 34px;
+    display: flex; align-items: center;
+    font-size: 11.5px; font-weight: 700; color: var(--text);
+    padding-left: 5px; white-space: nowrap;
+  }
+  .timeline-grid { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--border); opacity: 0.5; }
+  .timeline-today { position: absolute; top: 34px; bottom: 0; width: 2px; background: var(--danger); opacity: 0.7; z-index: 3; pointer-events: none; }
+  .timeline-row { display: flex; align-items: stretch; border-bottom: 1px solid var(--border); cursor: pointer; min-height: 38px; }
+  .timeline-row:hover { background: var(--row-hover); }
+  .timeline-label {
+    position: sticky; left: 0; z-index: 2;
+    flex: 0 0 auto;
+    background: inherit;
+    border-right: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 12px;
+    font-size: 13px; font-weight: 600; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    box-sizing: border-box;
+  }
+  .timeline-row:hover .timeline-label { background: var(--row-hover); }
+  .timeline-track { position: relative; flex: 0 0 auto; }
+  .timeline-bar {
+    position: absolute; top: 7px; height: 24px;
+    border-radius: 5px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
+    display: flex; align-items: center; overflow: hidden;
+    box-sizing: border-box;
+  }
+  .timeline-bar.overdue { outline: 2px solid var(--danger); outline-offset: -2px; }
+  .timeline-bar-label { color: #fff; font-size: 11px; font-weight: 700; padding: 0 7px; white-space: nowrap; text-shadow: 0 1px 1px rgba(0,0,0,0.3); }
+  .timeline-unscheduled { margin-top: 16px; }
+  .timeline-unsched-head { font-size: 12.5px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
+  .timeline-unsched-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .timeline-unsched-chip {
+    border: 1px solid var(--border); border-left: 3px solid var(--cat-color, var(--border));
+    background: var(--card-bg); color: var(--text);
+    border-radius: 7px; padding: 6px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  }
+  .timeline-unsched-chip:hover { background: var(--row-hover); }
+
+  /* ---------- Dashboard / analytics view ---------- */
+  .dash-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .dash-kpi {
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 14px; text-align: center;
+  }
+  .dash-kpi-value { font-size: 30px; font-weight: 800; color: var(--text); line-height: 1.05; }
+  .dash-kpi-label { font-size: 12px; color: var(--muted); margin-top: 5px; font-weight: 600; }
+  .dash-kpi.danger .dash-kpi-value { color: var(--danger); }
+  .dash-kpi.warn .dash-kpi-value { color: #e8a13a; }
+  .dash-kpi.good .dash-kpi-value { color: #00a862; }
+  .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  .dash-block { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+  .dash-block-title { margin: 0 0 12px; font-size: 14px; font-weight: 700; color: var(--text); }
+  .dash-empty { font-size: 13px; color: var(--muted); }
+  .dash-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+  .dash-bar-label { flex: 0 0 96px; font-size: 12.5px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dash-bar-track { flex: 1; height: 16px; background: var(--row-hover); border-radius: 4px; overflow: hidden; }
+  .dash-bar-fill { height: 100%; border-radius: 4px; min-width: 2px; transition: width 0.3s ease; }
+  .dash-bar-value { flex: 0 0 auto; font-size: 12.5px; font-weight: 700; color: var(--muted); min-width: 22px; text-align: right; }
+
   .kanban-board {
     display: flex;
     gap: 14px;
@@ -2904,6 +3067,8 @@
           <button data-view="cards" class="active">▦ Cards</button>
           <button data-view="table">☰ Table</button>
           <button data-view="kanban">🗂 Kanban</button>
+          <button data-view="timeline">📆 Timeline</button>
+          <button data-view="dashboard">📊 Dashboard</button>
         </div>
         <button class="btn secondary" id="selectModeBtn" title="Select multiple projects">☑️ Select</button>
       </div>
@@ -2918,6 +3083,7 @@
         <span class="frame-corner bl"></span>
         <span class="frame-corner br"></span>
         <button class="btn secondary" id="exportBtn" title="Export backup (.json)">⬇️ Export Backup</button>
+        <button class="btn secondary" id="exportCsvBtn" title="Export the current list as a spreadsheet (.csv)">📄 Export CSV</button>
         <button class="btn secondary" id="importBtn" title="Import backup (.json)">⬆️ Import Backup</button>
         <input type="file" id="importFileInput" accept="application/json,.json" style="display:none">
         <button class="btn secondary" id="themeToggleBtn" title="Toggle dark mode">🌙 Dark Mode</button>
@@ -2946,6 +3112,7 @@
         <span class="modal-cat-icon" id="detailCatIcon"></span>
         <input type="text" id="detailTitle" class="title-input">
 
+        <button class="modal-archive-btn" id="detailArchiveBtn" style="display:none">🗄 Archive</button>
         <button class="modal-delete-btn" id="detailDeleteBtn">🗑️ Trash Card</button>
         <button class="modal-close" id="detailCloseBtn" aria-label="Close">&times;</button>
       </div>
@@ -2988,6 +3155,18 @@
   <button class="btn secondary small-btn" id="bulkAssignBtn">Assign</button>
   <button class="btn secondary small-btn" id="bulkDeleteBtn">🗑️ Delete</button>
   <button class="btn secondary small-btn" id="bulkClearBtn">Clear</button>
+</div>
+
+<div class="palette-overlay" id="paletteOverlay">
+  <div class="palette" id="palette" role="dialog" aria-label="Command palette">
+    <input type="text" id="paletteInput" class="palette-input" placeholder="Search projects or run a command…" autocomplete="off" spellcheck="false">
+    <div class="palette-results" id="paletteResults"></div>
+    <div class="palette-foot">
+      <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+      <span><kbd>↵</kbd> select</span>
+      <span><kbd>esc</kbd> close</span>
+    </div>
+  </div>
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
@@ -3235,6 +3414,11 @@ function migrateState(parsed) {
     // Per-project attachments (links + files stored in Supabase Storage).
     if (!Array.isArray(p.attachments)) p.attachments = [];
 
+    // Archived = a shared "done / out of the way" flag (not per-user like the
+    // discard group). Archived projects are hidden from the views by default
+    // but stay searchable and can be unarchived.
+    if (typeof p.archived !== "boolean") p.archived = false;
+
     // Map image was removed; drop any leftover base64 blob from old data.
     if ("mapImage" in p) delete p.mapImage;
 
@@ -3295,6 +3479,8 @@ function migrateState(parsed) {
   if (parsed.ui.activityCollapsed === undefined) parsed.ui.activityCollapsed = true;
   if (typeof parsed.ui.assigneeFilter !== "string") parsed.ui.assigneeFilter = "all";
   if (typeof parsed.ui.dueFilter !== "string") parsed.ui.dueFilter = "all";
+  if (typeof parsed.ui.showArchived !== "boolean") parsed.ui.showArchived = false;
+  if (!["cards", "table", "kanban", "timeline", "dashboard"].includes(parsed.ui.view)) parsed.ui.view = "cards";
   if (!Array.isArray(parsed.activity)) parsed.activity = [];
   if (!parsed.roles || typeof parsed.roles !== "object" || Array.isArray(parsed.roles)) parsed.roles = {};
   if (!parsed.displayNames || typeof parsed.displayNames !== "object" || Array.isArray(parsed.displayNames)) parsed.displayNames = {};
@@ -3632,6 +3818,14 @@ function roleCategory() {
   return r.indexOf("todo-cat-") === 0 ? r.slice("todo-cat-".length) : null;
 }
 // Which projects the current role is even allowed to see.
+// Projects this user may see, minus archived ones (unless "Show archived" is
+// on). Used for the summary/filter-bar totals so they match the visible views.
+function visibleActiveProjects() {
+  return state.projects.filter(p => roleCanSee(p) && (state.ui.showArchived || !p.archived));
+}
+function archivedCountForRole() {
+  return state.projects.filter(p => roleCanSee(p) && p.archived).length;
+}
 function roleCanSee(project) {
   const r = currentRole();
   if (r === "todo-service") return project.statusIndex === AT_SERVICE_INDEX;
@@ -4057,6 +4251,7 @@ function newProject(name, category) {
     todos: [],
     comments: [],
     attachments: [],
+    archived: false,
     piles: {},
     assignee: "",
     dueDate: ""
@@ -4076,6 +4271,9 @@ function getFilteredProjects() {
   const query = (searchQuery || "").trim().toLowerCase();
   let result = state.projects.filter(p => {
     if (!roleCanSee(p)) return false;
+    // Archived projects are hidden unless "Show archived" is on, but stay
+    // findable when there's an active search query.
+    if (p.archived && !state.ui.showArchived && !query) return false;
     const openTodos = p.todos.filter(t => !t.done).length;
     if (!passesMultiFilter(categoryFilters, CATEGORIES.length, () => categoryFilters.includes(p.category))) return false;
     if (!passesMultiFilter(statusFilters, STAGES.length, () => statusFilters.includes(p.statusIndex))) return false;
@@ -4363,7 +4561,7 @@ function filtersActive() {
     || u.dueFilter !== "all";
 }
 function countOverdue() {
-  return state.projects.filter(p => roleCanSee(p) && getPile(p) !== "discard" && (dueInfo(projectDueDate(p)) || {}).state === "overdue").length;
+  return state.projects.filter(p => roleCanSee(p) && !p.archived && getPile(p) !== "discard" && (dueInfo(projectDueDate(p)) || {}).state === "overdue").length;
 }
 function confirmAdd() {
   if (!can("addProject")) return permissionDenied("Only admins can add projects.");
@@ -4385,7 +4583,7 @@ addNameInput.addEventListener("keydown", e => { if (e.key === "Enter") confirmAd
 
 function renderSummary() {
   const bar = document.getElementById("summaryBar");
-  const visible = state.projects.filter(roleCanSee);
+  const visible = visibleActiveProjects();
   const total = visible.length;
   const parts = [`<strong>${total}</strong> project${total === 1 ? "" : "s"}`];
   CATEGORIES.forEach(cat => {
@@ -4608,7 +4806,7 @@ function renderDiscardPile() {
 function renderFilterBar(shownCount) {
   const bar = document.createElement("div");
   bar.className = "filter-bar";
-  const total = state.projects.filter(roleCanSee).length;
+  const total = visibleActiveProjects().length;
   const label = document.createElement("span");
   label.innerHTML = filtersActive()
     ? `Showing <span class="filter-count">${shownCount}</span> of ${total}`
@@ -4620,6 +4818,19 @@ function renderFilterBar(shownCount) {
     clear.textContent = "✕ Clear all filters";
     clear.addEventListener("click", resetFilters);
     bar.appendChild(clear);
+  }
+  const archivedN = archivedCountForRole();
+  if (archivedN > 0) {
+    const arch = document.createElement("button");
+    arch.className = "archived-toggle" + (state.ui.showArchived ? " on" : "");
+    arch.textContent = state.ui.showArchived ? `🗄 Hide archived` : `🗄 Show archived (${archivedN})`;
+    arch.title = "Archived projects are kept out of the way but stay searchable";
+    arch.addEventListener("click", () => {
+      state.ui.showArchived = !state.ui.showArchived;
+      saveState();
+      renderContent();
+    });
+    bar.appendChild(arch);
   }
   return bar;
 }
@@ -4674,6 +4885,10 @@ function renderContent() {
     content.appendChild(renderCardsView(projects));
   } else if (state.ui.view === "kanban") {
     content.appendChild(renderKanbanView(projects));
+  } else if (state.ui.view === "timeline") {
+    content.appendChild(renderTimelineView(projects));
+  } else if (state.ui.view === "dashboard") {
+    content.appendChild(renderDashboardView(projects));
   } else {
     content.appendChild(renderTableView(projects));
   }
@@ -4846,7 +5061,7 @@ function renderCardsView(projects) {
     const tier = getCardTier(proj);
 
     const card = document.createElement("div");
-    card.className = "project-card status-" + proj.statusIndex + " tier-" + tier;
+    card.className = "project-card status-" + proj.statusIndex + " tier-" + tier + (proj.archived ? " archived-card" : "");
     const catColor = CATEGORY_META[proj.category];
     card.style.setProperty("--cat-color", catColor);
     card.style.setProperty("--cat-color-soft", catColor + "70");
@@ -5019,6 +5234,7 @@ function renderTableView(projects) {
     const tr = document.createElement("tr");
     if (dataRowIndex % 2 === 1) tr.classList.add("row-alt");
     tr.classList.add("status-" + proj.statusIndex);
+    if (proj.archived) tr.classList.add("archived-row");
     if (selectMode && selectedIds.has(proj.id)) tr.classList.add("selected");
     dataRowIndex++;
     tr.addEventListener("click", () => {
@@ -5049,6 +5265,12 @@ function renderTableView(projects) {
     const nameSpan = document.createElement("span");
     nameSpan.textContent = proj.name;
     tdName.appendChild(nameSpan);
+    if (proj.archived) {
+      const ab = document.createElement("span");
+      ab.className = "archived-badge";
+      ab.textContent = "Archived";
+      tdName.appendChild(ab);
+    }
     applyBidi(tdName, proj.name);
     tr.appendChild(tdName);
 
@@ -5086,6 +5308,15 @@ function renderTableView(projects) {
       toHandBtn.addEventListener("click", e => { e.stopPropagation(); setPile(proj, "hand", e.currentTarget); });
       tdDelete.appendChild(toHandBtn);
     }
+    if (can("editProject", proj)) {
+      const archBtn = document.createElement("button");
+      archBtn.className = "table-delete";
+      archBtn.title = proj.archived ? "Unarchive" : "Archive";
+      archBtn.setAttribute("aria-label", archBtn.title);
+      archBtn.textContent = proj.archived ? "♻️" : "🗄";
+      archBtn.addEventListener("click", e => { e.stopPropagation(); toggleArchive(proj.id); });
+      tdDelete.appendChild(archBtn);
+    }
     const delBtn = document.createElement("button");
     delBtn.className = "table-delete";
     delBtn.title = "Mark " + pileLabel("discard").replace(/^\S+\s/, "");
@@ -5099,6 +5330,266 @@ function renderTableView(projects) {
   });
   table.appendChild(tbody);
   wrap.appendChild(table);
+  return wrap;
+}
+
+/* ---------- Timeline / Gantt view ---------- */
+function dayNum(dateStr) { return Math.floor(new Date(dateStr + "T00:00:00").getTime() / 86400000); }
+function dayToDate(n) { return new Date(n * 86400000); }
+
+function renderTimelineView(projects) {
+  const wrap = document.createElement("div");
+  wrap.className = "timeline-wrap";
+
+  // A project is "scheduled" if it has at least one open to-do with a due date.
+  const scheduled = [];
+  const unscheduled = [];
+  projects.forEach(p => {
+    const dues = (p.todos || []).filter(t => !t.done && t.dueDate).map(t => t.dueDate).sort();
+    if (dues.length) scheduled.push({ p, start: dayNum(dues[0]), end: dayNum(dues[dues.length - 1]) });
+    else unscheduled.push(p);
+  });
+
+  if (scheduled.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.innerHTML = `<div class="empty-icon">📆</div><h3>Nothing scheduled</h3>
+      <p>Give a project's to-dos due dates and they'll appear on the timeline.</p>`;
+    wrap.appendChild(empty);
+  } else {
+    const DAY_W = 26, LABEL_W = 170;
+    const today = dayNum(todayStr());
+    let minD = Math.min(today, ...scheduled.map(s => s.start));
+    let maxD = Math.max(today, ...scheduled.map(s => s.end));
+    minD -= 3; maxD += 4;
+    const days = maxD - minD + 1;
+    const chartW = days * DAY_W;
+
+    // Sort by start date, then name.
+    scheduled.sort((a, b) => a.start - b.start || a.p.name.localeCompare(b.p.name));
+
+    const scroller = document.createElement("div");
+    scroller.className = "timeline-scroller";
+    const inner = document.createElement("div");
+    inner.className = "timeline-inner";
+    inner.style.width = (LABEL_W + chartW) + "px";
+
+    // Header: month labels + week gridlines.
+    const header = document.createElement("div");
+    header.className = "timeline-header";
+    const spacer = document.createElement("div");
+    spacer.className = "timeline-corner";
+    spacer.style.width = LABEL_W + "px";
+    spacer.textContent = scheduled.length + " scheduled";
+    header.appendChild(spacer);
+    const headTrack = document.createElement("div");
+    headTrack.className = "timeline-headtrack";
+    headTrack.style.width = chartW + "px";
+    for (let d = minD; d <= maxD; d++) {
+      const date = dayToDate(d);
+      if (date.getUTCDate() === 1 || d === minD) {
+        const m = document.createElement("div");
+        m.className = "timeline-month";
+        m.style.left = ((d - minD) * DAY_W) + "px";
+        m.textContent = date.toLocaleDateString(undefined, { month: "short", year: "2-digit" });
+        headTrack.appendChild(m);
+      }
+      // Weekly gridline (every 7 days from range start).
+      if ((d - minD) % 7 === 0) {
+        const g = document.createElement("div");
+        g.className = "timeline-grid";
+        g.style.left = ((d - minD) * DAY_W) + "px";
+        headTrack.appendChild(g);
+      }
+    }
+    header.appendChild(headTrack);
+    inner.appendChild(header);
+
+    // Today marker line spanning all rows.
+    const todayLine = document.createElement("div");
+    todayLine.className = "timeline-today";
+    todayLine.style.left = (LABEL_W + (today - minD) * DAY_W + DAY_W / 2) + "px";
+    todayLine.title = "Today";
+    inner.appendChild(todayLine);
+
+    scheduled.forEach(({ p, start, end }) => {
+      const row = document.createElement("div");
+      row.className = "timeline-row" + (p.archived ? " archived-row" : "");
+      row.addEventListener("click", () => openDetail(p.id));
+
+      const label = document.createElement("div");
+      label.className = "timeline-label";
+      label.style.width = LABEL_W + "px";
+      label.textContent = p.name;
+      label.title = p.name;
+      applyBidi(label, p.name);
+      row.appendChild(label);
+
+      const track = document.createElement("div");
+      track.className = "timeline-track";
+      track.style.width = chartW + "px";
+      // Weekly gridlines inside the row too.
+      for (let d = minD; d <= maxD; d += 7) {
+        const g = document.createElement("div");
+        g.className = "timeline-grid";
+        g.style.left = ((d - minD) * DAY_W) + "px";
+        track.appendChild(g);
+      }
+      const bar = document.createElement("div");
+      const overdue = start < today; // has an open to-do already past due
+      bar.className = "timeline-bar" + (overdue ? " overdue" : "");
+      bar.style.left = ((start - minD) * DAY_W) + "px";
+      bar.style.width = Math.max(DAY_W, (end - start + 1) * DAY_W) + "px";
+      bar.style.background = STAGES[p.statusIndex].color;
+      const openN = p.todos.filter(t => !t.done).length;
+      bar.title = p.name + " · " + STAGES[p.statusIndex].name + " · " + openN + " open to-do" + (openN === 1 ? "" : "s");
+      const barLabel = document.createElement("span");
+      barLabel.className = "timeline-bar-label";
+      barLabel.textContent = STAGES[p.statusIndex].name;
+      bar.appendChild(barLabel);
+      track.appendChild(bar);
+      row.appendChild(track);
+      inner.appendChild(row);
+    });
+
+    scroller.appendChild(inner);
+    wrap.appendChild(scroller);
+    // Scroll so "today" is comfortably in view.
+    requestAnimationFrame(() => { scroller.scrollLeft = Math.max(0, (today - minD) * DAY_W - 120); });
+  }
+
+  if (unscheduled.length) {
+    const u = document.createElement("div");
+    u.className = "timeline-unscheduled";
+    const h = document.createElement("div");
+    h.className = "timeline-unsched-head";
+    h.textContent = "Unscheduled (" + unscheduled.length + ") — no open to-do due dates";
+    u.appendChild(h);
+    const list = document.createElement("div");
+    list.className = "timeline-unsched-list";
+    unscheduled.forEach(p => {
+      const chip = document.createElement("button");
+      chip.className = "timeline-unsched-chip" + (p.archived ? " archived-row" : "");
+      chip.textContent = p.name;
+      chip.style.setProperty("--cat-color", CATEGORY_META[p.category]);
+      chip.addEventListener("click", () => openDetail(p.id));
+      list.appendChild(chip);
+    });
+    u.appendChild(list);
+    wrap.appendChild(u);
+  }
+  return wrap;
+}
+
+/* ---------- Dashboard / analytics view ---------- */
+function renderDashboardView(projects) {
+  const wrap = document.createElement("div");
+  wrap.className = "dashboard";
+  const today = dayNum(todayStr());
+
+  const totalProjects = projects.length;
+  let openTodos = 0, totalTodos = 0, doneTodos = 0, overdue = 0, dueWeek = 0;
+  const byStatus = STAGES.map(() => 0);
+  const byCat = {}; CATEGORIES.forEach(c => byCat[c] = 0);
+  const byAssignee = {};
+  projects.forEach(p => {
+    const open = p.todos.filter(t => !t.done).length;
+    openTodos += open;
+    totalTodos += p.todos.length;
+    doneTodos += p.todos.length - open;
+    byStatus[p.statusIndex]++;
+    if (byCat[p.category] === undefined) byCat[p.category] = 0;
+    byCat[p.category]++;
+    const dd = projectDueDate(p);
+    if (dd) {
+      const diff = dayNum(dd) - today;
+      if (diff < 0) overdue++;
+      else if (diff <= 7) dueWeek++;
+    }
+    if (open > 0) {
+      const who = p.assignee || "Unassigned";
+      byAssignee[who] = (byAssignee[who] || 0) + open;
+    }
+  });
+  const completion = totalTodos ? Math.round(doneTodos / totalTodos * 100) : 0;
+
+  if (totalProjects === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.innerHTML = `<div class="empty-icon">📊</div><h3>Nothing to chart</h3>
+      <p>No projects match the current filters.</p>`;
+    wrap.appendChild(empty);
+    return wrap;
+  }
+
+  // KPI tiles.
+  const kpis = document.createElement("div");
+  kpis.className = "dash-kpis";
+  function tile(value, label, cls) {
+    const t = document.createElement("div");
+    t.className = "dash-kpi" + (cls ? " " + cls : "");
+    t.innerHTML = `<div class="dash-kpi-value">${value}</div><div class="dash-kpi-label">${label}</div>`;
+    return t;
+  }
+  kpis.appendChild(tile(totalProjects, "Projects"));
+  kpis.appendChild(tile(openTodos, "Open to-dos"));
+  kpis.appendChild(tile(overdue, "Overdue", overdue ? "danger" : ""));
+  kpis.appendChild(tile(dueWeek, "Due ≤ 7 days", dueWeek ? "warn" : ""));
+  kpis.appendChild(tile(completion + "%", "To-dos done", "good"));
+  wrap.appendChild(kpis);
+
+  // Bar-chart block builder.
+  function chartBlock(title, rows) {
+    const block = document.createElement("div");
+    block.className = "dash-block";
+    const h = document.createElement("h3");
+    h.className = "dash-block-title";
+    h.textContent = title;
+    block.appendChild(h);
+    const max = Math.max(1, ...rows.map(r => r.count));
+    if (rows.every(r => r.count === 0)) {
+      const e = document.createElement("div");
+      e.className = "dash-empty";
+      e.textContent = "No data.";
+      block.appendChild(e);
+      return block;
+    }
+    rows.forEach(r => {
+      const row = document.createElement("div");
+      row.className = "dash-bar-row";
+      const lab = document.createElement("div");
+      lab.className = "dash-bar-label";
+      lab.textContent = r.label;
+      lab.title = r.label;
+      row.appendChild(lab);
+      const track = document.createElement("div");
+      track.className = "dash-bar-track";
+      const fill = document.createElement("div");
+      fill.className = "dash-bar-fill";
+      fill.style.width = (r.count / max * 100) + "%";
+      fill.style.background = r.color || "var(--accent)";
+      track.appendChild(fill);
+      row.appendChild(track);
+      const val = document.createElement("div");
+      val.className = "dash-bar-value";
+      val.textContent = r.count;
+      row.appendChild(val);
+      block.appendChild(row);
+    });
+    return block;
+  }
+
+  const grid = document.createElement("div");
+  grid.className = "dash-grid";
+  grid.appendChild(chartBlock("By status", STAGES.map((s, i) => ({ label: s.name, count: byStatus[i], color: s.color }))));
+  grid.appendChild(chartBlock("By kind", Object.keys(byCat).map(c => ({ label: c, count: byCat[c], color: CATEGORY_META[c] || "var(--accent)" }))));
+
+  const assigneeRows = Object.keys(byAssignee)
+    .map(name => ({ label: name, count: byAssignee[name], color: name === "Unassigned" ? "var(--muted)" : assigneeColor(name) }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8);
+  grid.appendChild(chartBlock("Open to-dos by assignee", assigneeRows.length ? assigneeRows : [{ label: "—", count: 0 }]));
+  wrap.appendChild(grid);
   return wrap;
 }
 
@@ -5140,6 +5631,19 @@ function trashCard(id) {
     saveState();
     renderAll();
     if (openDetailId === id) renderDetail();
+  });
+}
+
+// Archive / unarchive (shared "out of the way" flag, undoable).
+function toggleArchive(id) {
+  const proj = state.projects.find(p => p.id === id);
+  if (!proj) return;
+  if (!can("editProject", proj)) return permissionDenied("You don't have permission to archive projects.");
+  const wasArchived = !!proj.archived;
+  const name = proj.name;
+  runUndoable(wasArchived ? 'Unarchived "' + name + '".' : 'Archived "' + name + '".', () => {
+    proj.archived = !wasArchived;
+    logActivity((wasArchived ? 'unarchived "' : 'archived "') + name + '"', id);
   });
 }
 
@@ -5232,6 +5736,47 @@ function exportBackup() {
   URL.revokeObjectURL(url);
 }
 
+// Export the currently filtered & sorted project list as a CSV spreadsheet.
+function csvCell(v) {
+  const s = (v === null || v === undefined) ? "" : String(v);
+  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function exportCSV() {
+  const rows = getFilteredProjects();
+  const headers = ["Project", "Kind", "Status", "Assignee", "Soonest due", "Open to-dos", "Done to-dos", "Total to-dos", "Group", "Archived", "Notes", "Attachments"];
+  const lines = [headers.map(csvCell).join(",")];
+  rows.forEach(p => {
+    const open = p.todos.filter(t => !t.done).length;
+    const done = p.todos.length - open;
+    const groupLabel = ({ deck: "Projects", hand: "VIP", discard: "Irrelevant" })[getPile(p)] || "Projects";
+    lines.push([
+      p.name,
+      p.category,
+      STAGES[p.statusIndex] ? STAGES[p.statusIndex].name : p.statusIndex,
+      p.assignee || "",
+      projectDueDate(p) || "",
+      open,
+      done,
+      p.todos.length,
+      groupLabel,
+      p.archived ? "Yes" : "No",
+      (p.notes || []).length,
+      (p.attachments || []).length
+    ].map(csvCell).join(","));
+  });
+  // BOM so Excel reads UTF-8 (Hebrew names etc.) correctly.
+  const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `project-tracker-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showInfoToast("📄 Exported " + rows.length + " project" + (rows.length === 1 ? "" : "s") + " to CSV.");
+}
+
 function importBackup(file) {
   if (!can("import")) return permissionDenied("Only admins can import a backup.");
   const reader = new FileReader();
@@ -5273,6 +5818,7 @@ function importBackup(file) {
 }
 
 document.getElementById("exportBtn").addEventListener("click", exportBackup);
+document.getElementById("exportCsvBtn").addEventListener("click", exportCSV);
 document.getElementById("importBtn").addEventListener("click", () => {
   document.getElementById("importFileInput").click();
 });
@@ -5291,6 +5837,9 @@ const detailBody = document.getElementById("detailBody");
 document.getElementById("detailCloseBtn").addEventListener("click", closeDetail);
 document.getElementById("detailDeleteBtn").addEventListener("click", () => {
   if (openDetailId) deleteProject(openDetailId);
+});
+document.getElementById("detailArchiveBtn").addEventListener("click", () => {
+  if (openDetailId) toggleArchive(openDetailId);
 });
 detailOverlay.addEventListener("click", e => { if (e.target === detailOverlay) closeDetail(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeDetail(); });
@@ -5372,6 +5921,14 @@ function renderDetail() {
   const delBtn = document.getElementById("detailDeleteBtn");
   delBtn.textContent = "🗑️ Delete forever";
   delBtn.style.display = can("deleteProject") ? "" : "none";
+
+  const archBtn = document.getElementById("detailArchiveBtn");
+  if (can("editProject", proj)) {
+    archBtn.style.display = "";
+    archBtn.textContent = proj.archived ? "♻️ Unarchive" : "🗄 Archive";
+  } else {
+    archBtn.style.display = "none";
+  }
 
   detailTitle.value = proj.name;
   detailTitle.readOnly = !can("editProject", proj);
@@ -6837,6 +7394,123 @@ document.getElementById("toolbarMobileHeader").addEventListener("click", () => {
   document.getElementById("toolbarMobileHeader").setAttribute("aria-expanded", open ? "true" : "false");
 });
 
+/* ---------- Command palette (Cmd/Ctrl-K) ---------- */
+const paletteOverlay = document.getElementById("paletteOverlay");
+const paletteInput = document.getElementById("paletteInput");
+const paletteResults = document.getElementById("paletteResults");
+let paletteEntries = [];
+let paletteIndex = 0;
+
+function setView(v) {
+  state.ui.view = v;
+  saveState();
+  renderToolbar();
+  renderContent();
+}
+
+// The command set, filtered by role/availability at open time.
+function buildPaletteCommands() {
+  const cmds = [];
+  const add = (icon, label, run, hint) => cmds.push({ icon, label, hint: hint || "Command", run });
+  add("➕", "Add project", () => openAddBar(), "Action");
+  add("▦", "View: Cards", () => setView("cards"), "View");
+  add("☰", "View: Table", () => setView("table"), "View");
+  add("🗂", "View: Kanban", () => setView("kanban"), "View");
+  add("📆", "View: Timeline", () => setView("timeline"), "View");
+  add("📊", "View: Dashboard", () => setView("dashboard"), "View");
+  add("🔍", "Focus search", () => document.getElementById("searchInput").focus(), "Action");
+  add("🧹", "Clear all filters", () => resetFilters(), "Action");
+  add("☑️", "Toggle select mode", () => setSelectMode(!selectMode), "Action");
+  const archivedN = archivedCountForRole();
+  if (archivedN > 0) add("🗄", state.ui.showArchived ? "Hide archived projects" : "Show archived projects", () => { state.ui.showArchived = !state.ui.showArchived; saveState(); renderContent(); }, "Toggle");
+  add(state.ui.theme === "dark" ? "☀️" : "🌙", state.ui.theme === "dark" ? "Switch to light mode" : "Switch to dark mode", () => { document.getElementById("themeToggleBtn").click(); }, "Toggle");
+  add("⬇️", "Export backup (JSON)", () => exportBackup(), "Export");
+  add("📄", "Export CSV", () => exportCSV(), "Export");
+  if (can("import")) add("⬆️", "Import backup", () => document.getElementById("importFileInput").click(), "Action");
+  if (can("manageRoles")) add("👥", "Open Team & roles", () => openTeam(), "Admin");
+  if (currentUserEmail) add("🚪", "Sign out", () => doSignOut(), "Account");
+  return cmds;
+}
+
+function computePaletteEntries(query) {
+  const q = query.trim().toLowerCase();
+  const cmds = buildPaletteCommands().filter(c => !q || c.label.toLowerCase().includes(q));
+  // Project matches (open detail). Include archived so they stay findable.
+  let projs = state.projects.filter(roleCanSee);
+  if (q) projs = projs.filter(p => p.name.toLowerCase().includes(q));
+  const projEntries = projs.slice(0, q ? 8 : 5).map(p => ({
+    icon: "📁",
+    label: p.name + (p.archived ? " (archived)" : ""),
+    hint: "Open",
+    run: () => openDetail(p.id)
+  }));
+  return q ? [...projEntries, ...cmds] : [...cmds, ...projEntries];
+}
+
+function renderPalette() {
+  paletteResults.innerHTML = "";
+  if (paletteEntries.length === 0) {
+    const e = document.createElement("div");
+    e.className = "palette-empty";
+    e.textContent = "No matches.";
+    paletteResults.appendChild(e);
+    return;
+  }
+  paletteEntries.forEach((entry, i) => {
+    const item = document.createElement("div");
+    item.className = "palette-item" + (i === paletteIndex ? " active" : "");
+    item.innerHTML = `<span class="palette-item-icon">${entry.icon}</span>` +
+      `<span class="palette-item-label"></span>` +
+      `<span class="palette-item-hint">${entry.hint}</span>`;
+    item.querySelector(".palette-item-label").textContent = entry.label;
+    item.addEventListener("mousemove", () => { if (paletteIndex !== i) { paletteIndex = i; updatePaletteActive(); } });
+    item.addEventListener("click", () => runPaletteEntry(i));
+    paletteResults.appendChild(item);
+  });
+}
+function updatePaletteActive() {
+  [...paletteResults.children].forEach((el, i) => el.classList.toggle("active", i === paletteIndex));
+  const active = paletteResults.children[paletteIndex];
+  if (active && active.scrollIntoView) active.scrollIntoView({ block: "nearest" });
+}
+function refreshPalette() {
+  paletteEntries = computePaletteEntries(paletteInput.value);
+  paletteIndex = 0;
+  renderPalette();
+}
+function runPaletteEntry(i) {
+  const entry = paletteEntries[i];
+  if (!entry) return;
+  closePalette();
+  entry.run();
+}
+function openPalette() {
+  paletteInput.value = "";
+  refreshPalette();
+  paletteOverlay.classList.add("visible");
+  paletteInput.focus();
+}
+function closePalette() {
+  paletteOverlay.classList.remove("visible");
+}
+paletteInput.addEventListener("input", refreshPalette);
+paletteInput.addEventListener("keydown", e => {
+  if (e.key === "ArrowDown") { e.preventDefault(); if (paletteEntries.length) { paletteIndex = (paletteIndex + 1) % paletteEntries.length; updatePaletteActive(); } }
+  else if (e.key === "ArrowUp") { e.preventDefault(); if (paletteEntries.length) { paletteIndex = (paletteIndex - 1 + paletteEntries.length) % paletteEntries.length; updatePaletteActive(); } }
+  else if (e.key === "Enter") { e.preventDefault(); runPaletteEntry(paletteIndex); }
+  else if (e.key === "Escape") { e.preventDefault(); closePalette(); }
+});
+paletteOverlay.addEventListener("click", e => { if (e.target === paletteOverlay) closePalette(); });
+
+// Global Cmd/Ctrl-K to toggle the palette (works even while typing).
+document.addEventListener("keydown", e => {
+  if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) {
+    e.preventDefault();
+    if (paletteOverlay.classList.contains("visible")) closePalette();
+    else openPalette();
+  }
+});
+
 /* ---------- Keyboard shortcuts ---------- */
 document.addEventListener("keydown", e => {
   const t = e.target;
@@ -6846,9 +7520,11 @@ document.addEventListener("keydown", e => {
   }
   if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
   if (detailOverlay.classList.contains("visible")) return;
+  if (paletteOverlay.classList.contains("visible")) return;
   if (e.key === "/") { e.preventDefault(); document.getElementById("searchInput").focus(); }
   else if (e.key === "n" || e.key === "N") { e.preventDefault(); openAddBar(); }
   else if (e.key === "s" || e.key === "S") { e.preventDefault(); setSelectMode(!selectMode); }
+  else if (e.key === "k" || e.key === "K") { e.preventDefault(); openPalette(); }
 });
 
 /* ---------- Team & roles admin ---------- */
