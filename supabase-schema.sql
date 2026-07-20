@@ -37,3 +37,25 @@ begin
     null;
   end;
 end $$;
+
+-- ============================================================
+-- File attachments (optional) — per-project file uploads.
+-- Creates a private Storage bucket named "attachments" and locks it to
+-- signed-in users, just like the app_state table above. Links (URLs) work
+-- without this; only *file* uploads need the bucket.
+-- ============================================================
+insert into storage.buckets (id, name, public)
+values ('attachments', 'attachments', false)
+on conflict (id) do nothing;
+
+-- Only signed-in users may read/upload/replace/remove files in this bucket.
+-- (Storage RLS is enabled by default; these policies scope it to the bucket.)
+drop policy if exists "attachments read"   on storage.objects;
+drop policy if exists "attachments insert" on storage.objects;
+drop policy if exists "attachments update" on storage.objects;
+drop policy if exists "attachments delete" on storage.objects;
+
+create policy "attachments read"   on storage.objects for select to authenticated using (bucket_id = 'attachments');
+create policy "attachments insert" on storage.objects for insert to authenticated with check (bucket_id = 'attachments');
+create policy "attachments update" on storage.objects for update to authenticated using (bucket_id = 'attachments') with check (bucket_id = 'attachments');
+create policy "attachments delete" on storage.objects for delete to authenticated using (bucket_id = 'attachments');

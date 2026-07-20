@@ -153,7 +153,7 @@
     /* Smaller side padding on phones gives the grid room for 2 columns. */
     body { padding: 12px !important; overflow-x: hidden; }
     /* Reliable 2-up card grid down to ~320px-wide phones. */
-    .cards-grid { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)) !important; gap: 12px 10px !important; }
+    .cards-grid, .skeleton-grid { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)) !important; gap: 12px 10px !important; }
     /* Keep the role pill from forcing horizontal overflow. */
     .role-pill { white-space: normal !important; }
   }
@@ -419,6 +419,37 @@
     border-radius: 8px;
     font-size: 14px;
   }
+
+  /* Loading skeleton (shown during the first shared-data fetch) */
+  .skeleton-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+    gap: 16px 12px;
+  }
+  .skeleton-card {
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--card-bg);
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .sk-line, .sk-art {
+    border-radius: 5px;
+    background: linear-gradient(90deg,
+      var(--border) 25%, var(--card-bg) 37%, var(--border) 63%);
+    background-size: 400% 100%;
+    animation: skShimmer 1.4s ease infinite;
+  }
+  .sk-line { height: 10px; }
+  .sk-title { width: 70%; height: 13px; margin: 0 auto; }
+  .sk-art { height: 60px; }
+  .sk-wide { width: 90%; }
+  .sk-mid { width: 60%; }
+  .sk-bar { height: 8px; width: 100%; margin-top: 4px; }
+  @keyframes skShimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+  @media (prefers-reduced-motion: reduce) { .sk-line, .sk-art { animation: none; } }
 
   .empty-state {
     display: flex;
@@ -1357,22 +1388,61 @@
     opacity: 0.55;
     letter-spacing: 0;
   }
-  .section-box.map-box { grid-column: 1 / -1; }
-
-  .map-preview {
-    max-width: 100%;
-    max-height: 300px;
-    display: block;
-    margin-bottom: 12px;
-    border-radius: 8px;
+  /* Attachments */
+  .attach-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+  .attach-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 9px;
     border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--card-bg);
   }
-  .map-placeholder {
+  .attach-icon { flex: 0 0 auto; font-size: 15px; }
+  .attach-main { flex: 1; min-width: 0; }
+  .attach-name {
+    display: block;
+    max-width: 100%;
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--accent);
+    font-size: 13.5px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .attach-name:hover { text-decoration: underline; }
+  .attach-meta { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+  .attach-delete {
+    flex: 0 0 auto;
+    background: none;
+    border: none;
     color: var(--muted);
+    cursor: pointer;
     font-size: 13px;
-    margin-bottom: 12px;
+    padding: 2px 5px;
+    border-radius: 5px;
   }
-  .map-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .attach-delete:hover { color: var(--danger); background: var(--danger-soft, rgba(196,58,58,0.12)); }
+  .attach-add { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+  .attach-url { flex: 2 1 160px; min-width: 120px; }
+  .attach-label { flex: 1 1 110px; min-width: 90px; }
+  .attach-add input {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--input-bg, var(--card-bg));
+    color: var(--text);
+    font-size: 13px;
+  }
+  .attach-file-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .attach-file-btn { cursor: pointer; margin: 0; }
+  .attach-hint { font-size: 11.5px; color: var(--muted); }
 
   .notes-box { margin-bottom: 0; }
   .detail-stack {
@@ -2142,7 +2212,10 @@
   }
   .sync-status.local   .sync-dot { background: #8993a4; }
   .sync-status.synced  .sync-dot { background: #00c875; }
-  .sync-status.saving  .sync-dot { background: #fdab3d; }
+  .sync-status.saved   .sync-dot { background: #00c875; }
+  .sync-status.saved   { color: #00a862; }
+  .sync-status.saving  .sync-dot { background: #fdab3d; animation: syncPulse 1s ease-in-out infinite; }
+  @keyframes syncPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
   .sync-status.connecting .sync-dot { background: #579bfc; }
   .sync-status.error   .sync-dot { background: #c43a3a; }
 
@@ -3081,6 +3154,7 @@ const STORAGE_KEY = "projectTrackerStateV2";
 const SUPABASE_URL = "https://gztzqkjihoexjlrldsfx.supabase.co";        // e.g. "https://abcdefgh.supabase.co" (no path on the end)
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6dHpxa2ppaG9leGpscmxkc2Z4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4MzMwNDMsImV4cCI6MjA5OTQwOTA0M30.f94XBtlv4zInHNh-PbrZFzeAFRinqdmGXu7bRD688X0";   // your project's public "anon" key
 const SHARED_ROW_ID = "main";   // the shared workspace id (leave as-is)
+const ATTACH_BUCKET = "attachments"; // Supabase Storage bucket for file attachments
 
 const DEFAULT_PROJECT_NAMES = {
   Dolley: [
@@ -3157,6 +3231,12 @@ function migrateState(parsed) {
 
     // Per-project comment thread.
     if (!Array.isArray(p.comments)) p.comments = [];
+
+    // Per-project attachments (links + files stored in Supabase Storage).
+    if (!Array.isArray(p.attachments)) p.attachments = [];
+
+    // Map image was removed; drop any leftover base64 blob from old data.
+    if ("mapImage" in p) delete p.mapImage;
 
     // Quests (stored as `todos`): ensure new fields (description + sub-missions)
     if (!Array.isArray(p.todos)) p.todos = [];
@@ -3368,6 +3448,12 @@ function saveState() {
     console.error("Failed to save state (storage may be full):", e);
     showAlert({ title: "Could not save", message: "Could not save changes — browser storage may be full (this can happen with large images)." });
   }
+  // Give immediate feedback that the edit was captured.
+  if (backendReady && !applyingRemote) {
+    setSyncStatus("saving", "Saving…");   // debounced push follows
+  } else if (!backendEnabled()) {
+    flashSaved();                          // local-only: confirm the write landed
+  }
   // Push the shared data to the cloud (no-op unless a backend is configured).
   schedulePush();
 }
@@ -3383,6 +3469,9 @@ let supabaseClient = null;
 let backendReady = false;
 let applyingRemote = false;   // guards against re-pushing data we just received
 let pushTimer = null;
+// True while we're waiting on the very first shared-data fetch, so the content
+// area can show a loading skeleton instead of a misleading "no projects" flash.
+let awaitingFirstLoad = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 function backendEnabled() { return !!(SUPABASE_URL && SUPABASE_ANON_KEY); }
 
@@ -3392,6 +3481,27 @@ function setSyncStatus(kind, text) {
   el.className = "sync-status " + kind;
   const t = document.getElementById("syncStatusText");
   if (t) t.textContent = text;
+}
+
+// The pill's resting state once nothing is in flight.
+function idleSyncState() {
+  if (!backendEnabled()) return ["local", "Local only"];
+  if (!backendReady) return ["connecting", "Sign in required"];
+  return ["synced", "Shared · synced"];
+}
+
+// Briefly confirm a successful save, then settle back to the resting state.
+let savedFlashTimer = null;
+function flashSaved() {
+  setSyncStatus("saved", "Saved ✓");
+  clearTimeout(savedFlashTimer);
+  savedFlashTimer = setTimeout(() => {
+    const el = document.getElementById("syncStatus");
+    if (el && el.classList.contains("saved")) {
+      const [k, t] = idleSyncState();
+      setSyncStatus(k, t);
+    }
+  }, 1600);
 }
 
 function sharedSnapshot() {
@@ -3724,7 +3834,7 @@ async function pushNow() {
     console.error("Sync push failed:", error);
     setSyncStatus("error", "Sync error");
   } else {
-    setSyncStatus("synced", "Shared · synced");
+    flashSaved();
   }
 }
 
@@ -3739,6 +3849,7 @@ let realtimeSubscribed = false;
 async function initBackend() {
   if (!backendEnabled()) {
     // Local-only mode: no cloud, no login required.
+    awaitingFirstLoad = false;
     setSyncStatus("local", "Local only");
     return;
   }
@@ -3790,6 +3901,7 @@ async function startSync() {
       // First run: seed the shared workspace with what we have locally.
       await pushNow();
     }
+    awaitingFirstLoad = false;
     // Always re-render so the UI reflects the signed-in user's role + data.
     rerenderAllData();
     setSyncStatus("synced", "Shared · synced");
@@ -3813,6 +3925,8 @@ async function startSync() {
   } catch (e) {
     console.error("Sync failed:", e);
     backendReady = false;
+    awaitingFirstLoad = false;
+    renderContent();
     setSyncStatus("error", "Sync error");
   }
 }
@@ -3890,10 +4004,10 @@ function newProject(name, category) {
     name,
     category,
     statusIndex: 0,
-    mapImage: null,
     notes: [],
     todos: [],
     comments: [],
+    attachments: [],
     piles: {},
     assignee: "",
     dueDate: ""
@@ -4463,6 +4577,14 @@ function renderContent() {
   renderSummary();
   const content = document.getElementById("content");
   content.innerHTML = "";
+
+  // Waiting on the first shared-data fetch (and nothing cached yet): show a
+  // loading skeleton rather than a misleading "No projects yet" empty state.
+  if (awaitingFirstLoad && state.projects.length === 0) {
+    content.appendChild(renderLoadingSkeleton());
+    return;
+  }
+
   const projects = getFilteredProjects();
 
   content.appendChild(renderFilterBar(projects.length));
@@ -4504,6 +4626,26 @@ function renderContent() {
   } else {
     content.appendChild(renderTableView(projects));
   }
+}
+
+// Shimmering placeholder cards shown while the shared workspace loads.
+function renderLoadingSkeleton() {
+  const wrap = document.createElement("div");
+  wrap.className = "skeleton-grid";
+  wrap.setAttribute("aria-busy", "true");
+  wrap.setAttribute("aria-label", "Loading projects…");
+  for (let i = 0; i < 8; i++) {
+    const card = document.createElement("div");
+    card.className = "skeleton-card";
+    card.innerHTML =
+      '<div class="sk-line sk-title"></div>' +
+      '<div class="sk-art"></div>' +
+      '<div class="sk-line sk-wide"></div>' +
+      '<div class="sk-line sk-mid"></div>' +
+      '<div class="sk-line sk-bar"></div>';
+    wrap.appendChild(card);
+  }
+  return wrap;
 }
 
 /* Kanban board: one column per stage, drag cards between columns. */
@@ -5193,6 +5335,7 @@ function renderDetail() {
   if (can("editProject", proj)) stack.appendChild(renderAssignmentBox(proj));
   stack.appendChild(renderQuestLog(proj));
   stack.appendChild(renderProjectNotesBox(proj));
+  stack.appendChild(renderAttachmentsBox(proj));
   stack.appendChild(renderCommentsBox(proj));
   stack.appendChild(renderProjectHistoryBox(proj));
   detailBody.appendChild(stack);
@@ -5274,6 +5417,192 @@ function renderCommentsBox(proj) {
     empty.className = "missions-empty";
     empty.textContent = "No comments yet.";
     box.appendChild(empty);
+  }
+
+  return box;
+}
+
+function formatBytes(n) {
+  if (typeof n !== "number") return "";
+  if (n < 1024) return n + " B";
+  if (n < 1024 * 1024) return Math.round(n / 1024) + " KB";
+  return (n / (1024 * 1024)).toFixed(1) + " MB";
+}
+
+// Files live in Supabase Storage; only possible with a signed-in session.
+function attachStorageReady() { return !!(supabaseClient && backendReady); }
+
+async function uploadAttachmentFile(proj, file) {
+  if (!attachStorageReady()) {
+    showAlert({ title: "Not available", message: "Sign in with shared data on to attach files. You can still add links." });
+    return;
+  }
+  const MAX = 25 * 1024 * 1024;
+  if (file.size > MAX) {
+    showAlert({ title: "File too large", message: "Please attach files under 25 MB. For big files, add a link instead." });
+    return;
+  }
+  const safe = file.name.replace(/[^\w.\-]+/g, "_").slice(-80) || "file";
+  const path = proj.id + "/" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7) + "-" + safe;
+  setSyncStatus("saving", "Uploading…");
+  const { error } = await supabaseClient.storage.from(ATTACH_BUCKET)
+    .upload(path, file, { upsert: false, contentType: file.type || undefined });
+  if (error) {
+    console.error("Attachment upload failed:", error);
+    const [k, t] = idleSyncState(); setSyncStatus(k, t);
+    showAlert({ title: "Upload failed", message: (error.message || "Could not upload the file.") + "\n\nMake sure the \"" + ATTACH_BUCKET + "\" storage bucket exists (see the README)." });
+    return;
+  }
+  proj.attachments.push({ type: "file", name: file.name, path, size: file.size, ts: Date.now(), user: currentUserLabel });
+  logActivity('attached "' + file.name + '" to "' + proj.name + '"', proj.id);
+  persistAndRefresh();
+}
+
+async function openAttachment(att) {
+  if (att.type === "link") {
+    window.open(att.url, "_blank", "noopener");
+    return;
+  }
+  if (!attachStorageReady()) {
+    showAlert({ title: "Not available", message: "Sign in with shared data on to open attached files." });
+    return;
+  }
+  const { data, error } = await supabaseClient.storage.from(ATTACH_BUCKET).createSignedUrl(att.path, 3600);
+  if (error || !data || !data.signedUrl) {
+    console.error("Signed URL failed:", error);
+    showAlert({ title: "Could not open", message: (error && error.message) || "The file may have been removed." });
+    return;
+  }
+  window.open(data.signedUrl, "_blank", "noopener");
+}
+
+function renderAttachmentsBox(proj) {
+  const box = document.createElement("div");
+  box.className = "section-box";
+  const editable = can("editProject", proj);
+  if (!Array.isArray(proj.attachments)) proj.attachments = [];
+  const h4 = document.createElement("h4");
+  h4.textContent = "📎 Attachments";
+  box.appendChild(h4);
+
+  if (proj.attachments.length) {
+    const list = document.createElement("div");
+    list.className = "attach-list";
+    proj.attachments.forEach((att) => {
+      const realIdx = proj.attachments.indexOf(att);
+      const row = document.createElement("div");
+      row.className = "attach-item";
+
+      const icon = document.createElement("span");
+      icon.className = "attach-icon";
+      icon.textContent = att.type === "link" ? "🔗" : "📄";
+      row.appendChild(icon);
+
+      const main = document.createElement("div");
+      main.className = "attach-main";
+      const nameBtn = document.createElement("button");
+      nameBtn.type = "button";
+      nameBtn.className = "attach-name";
+      nameBtn.textContent = att.name || att.url || "Attachment";
+      nameBtn.title = att.type === "link" ? (att.url || "") : "Open file";
+      applyBidi(nameBtn, nameBtn.textContent);
+      nameBtn.addEventListener("click", () => openAttachment(att));
+      main.appendChild(nameBtn);
+
+      const meta = document.createElement("div");
+      meta.className = "attach-meta";
+      const bits = [];
+      if (att.type === "file" && att.size) bits.push(formatBytes(att.size));
+      if (att.user) bits.push(att.user);
+      if (att.ts) bits.push(timeAgo(att.ts));
+      meta.textContent = bits.join(" · ");
+      main.appendChild(meta);
+      row.appendChild(main);
+
+      if (editable) {
+        const del = document.createElement("button");
+        del.className = "attach-delete";
+        del.textContent = "✕";
+        del.title = "Remove attachment";
+        del.setAttribute("aria-label", "Remove attachment");
+        del.addEventListener("click", () => {
+          runUndoable("Attachment removed.", () => { proj.attachments.splice(realIdx, 1); });
+        });
+        row.appendChild(del);
+      }
+      list.appendChild(row);
+    });
+    box.appendChild(list);
+  } else {
+    const empty = document.createElement("div");
+    empty.className = "missions-empty";
+    empty.textContent = "No attachments yet.";
+    box.appendChild(empty);
+  }
+
+  if (editable) {
+    const linkRow = document.createElement("div");
+    linkRow.className = "attach-add";
+    const urlInput = document.createElement("input");
+    urlInput.type = "url";
+    urlInput.className = "attach-url";
+    urlInput.placeholder = "Paste a link (https://…)";
+    urlInput.dir = "ltr";
+    const labelInput = document.createElement("input");
+    labelInput.type = "text";
+    labelInput.className = "attach-label";
+    labelInput.placeholder = "Label (optional)";
+    labelInput.dir = "auto";
+    const addLinkBtn = document.createElement("button");
+    addLinkBtn.className = "btn small-btn";
+    addLinkBtn.textContent = "Add link";
+    function addLink() {
+      let url = urlInput.value.trim();
+      if (!url) return;
+      if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+      const name = labelInput.value.trim() || url;
+      proj.attachments.push({ type: "link", name, url, ts: Date.now(), user: currentUserLabel });
+      logActivity('added a link to "' + proj.name + '"', proj.id);
+      urlInput.value = ""; labelInput.value = "";
+      persistAndRefresh();
+    }
+    addLinkBtn.addEventListener("click", addLink);
+    urlInput.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addLink(); } });
+    labelInput.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addLink(); } });
+    linkRow.appendChild(urlInput);
+    linkRow.appendChild(labelInput);
+    linkRow.appendChild(addLinkBtn);
+    box.appendChild(linkRow);
+
+    const fileRow = document.createElement("div");
+    fileRow.className = "attach-file-row";
+    if (attachStorageReady()) {
+      const fileLabel = document.createElement("label");
+      fileLabel.className = "btn secondary small-btn attach-file-btn";
+      fileLabel.textContent = "📎 Attach file";
+      const fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.style.display = "none";
+      fileInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) uploadAttachmentFile(proj, file);
+        fileInput.value = "";
+      });
+      fileLabel.appendChild(fileInput);
+      fileRow.appendChild(fileLabel);
+      const hint = document.createElement("span");
+      hint.className = "attach-hint";
+      hint.textContent = "Up to 25 MB · stored in Supabase Storage.";
+      fileRow.appendChild(hint);
+    } else {
+      const hint = document.createElement("span");
+      hint.className = "attach-hint";
+      hint.textContent = backendEnabled()
+        ? "Sign in to attach files. Links work now."
+        : "Enable shared data (Supabase) to attach files. Links work now.";
+      fileRow.appendChild(hint);
+    }
+    box.appendChild(fileRow);
   }
 
   return box;
@@ -5797,60 +6126,6 @@ function renderQuestCard(proj, quest, idx) {
 
   card.appendChild(subs);
   return card;
-}
-
-function renderMapBox(proj) {
-  const box = document.createElement("div");
-  box.className = "section-box map-box";
-  const h4 = document.createElement("h4");
-  h4.textContent = "\u{1F5FA}\u{FE0F} Map";
-  box.appendChild(h4);
-
-  if (proj.mapImage) {
-    const img = document.createElement("img");
-    img.className = "map-preview";
-    img.src = proj.mapImage;
-    box.appendChild(img);
-  } else {
-    const placeholder = document.createElement("div");
-    placeholder.className = "map-placeholder";
-    placeholder.textContent = "No map image uploaded yet.";
-    box.appendChild(placeholder);
-  }
-
-  if (!can("editProject", proj)) return box; // read-only map
-
-  const controls = document.createElement("div");
-  controls.className = "map-controls";
-
-  const fileInput = document.createElement("input");
-  fileInput.type = "file";
-  fileInput.accept = "image/*";
-  fileInput.addEventListener("change", (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      proj.mapImage = ev.target.result;
-      persistAndRefresh();
-    };
-    reader.readAsDataURL(file);
-  });
-  controls.appendChild(fileInput);
-
-  if (proj.mapImage) {
-    const removeBtn = document.createElement("button");
-    removeBtn.className = "btn secondary small-btn";
-    removeBtn.textContent = "Remove image";
-    removeBtn.addEventListener("click", () => {
-      proj.mapImage = null;
-      persistAndRefresh();
-    });
-    controls.appendChild(removeBtn);
-  }
-
-  box.appendChild(controls);
-  return box;
 }
 
 function createEntryItem(item, accentVar, onToggle, onDelete, onEdit) {

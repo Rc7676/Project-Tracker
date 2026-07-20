@@ -129,7 +129,7 @@ via `BOOTSTRAP_ADMINS` (so you can't lock yourself out); the current owner is
 ### What is and isn't shared
 
 - **Shared across everyone:** projects, their status/quests/sub-missions/notes/
-  map images, plus the General Missions and General Notes panels.
+  attachments, plus the General Missions and General Notes panels.
 - **Local to each person (not shared):** search text, filters, sort, saved
   presets, light/dark mode, and the Normal/Fantasy card style. Your view is
   yours; the data is everyone's.
@@ -167,6 +167,15 @@ plain in-memory `state` object and calls `saveState()`.
   to-do, so deadlines still surface at a glance.
 - **Comments & history:** each project's detail view has a comment thread and a
   history of changes made to it.
+- **Attachments:** each project has an **📎 Attachments** section for links
+  (paste any URL) and files. Links work anywhere; **file uploads need shared
+  data on** (Supabase) — they're stored in a private `attachments` Storage
+  bucket and opened via short-lived signed links, so only signed-in teammates
+  can read them. Run the latest `supabase-schema.sql` once to create the bucket
+  (files up to 25 MB each).
+- **Save feedback:** the footer pill shows **Saving… → Saved ✓** on every edit,
+  so you always know your change was captured (and synced, when shared data is
+  on). A loading skeleton appears while the shared workspace first loads.
 - **Undo:** most actions (delete a project, change status, delete a to-do/note/
   comment/mission, bulk edits, import) show a one-click **Undo** toast.
 - **Keyboard shortcuts:** `/` focuses search, `n` starts a new project, `s`
