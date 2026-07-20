@@ -2952,6 +2952,27 @@
       min-height: 34px;
     }
     .chip, .segmented button { min-height: 36px; }
+
+    /* View switcher: give the 5 view buttons their own full-width row so
+       Kanban / Timeline / Dashboard are reachable (previously clipped). */
+    .view-controls-row { flex-wrap: wrap; gap: 10px; }
+    .view-controls-row #addProjectBtn { order: 1; }
+    .view-controls-row #selectModeBtn { order: 2; margin-left: auto; }
+    .view-controls-row #viewToggle {
+      order: 3;
+      flex: 1 1 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .view-controls-row #viewToggle::-webkit-scrollbar { display: none; }
+    .view-controls-row #viewToggle button {
+      flex: 1 0 auto;
+      justify-content: center;
+      padding: 10px 10px;
+      font-size: 13px;
+      white-space: nowrap;
+    }
   }
 
   /* ============================================================
@@ -4563,7 +4584,8 @@ function renderToolbar() {
     renderContent();
   };
 
-  document.querySelectorAll("#viewToggle button").forEach(btn => {
+  const viewToggle = document.getElementById("viewToggle");
+  viewToggle.querySelectorAll("button").forEach(btn => {
     btn.classList.toggle("active", btn.dataset.view === state.ui.view);
     btn.onclick = () => {
       state.ui.view = btn.dataset.view;
@@ -4571,6 +4593,13 @@ function renderToolbar() {
       renderToolbar();
       renderContent();
     };
+  });
+  // If the switcher scrolls (narrow phones), keep the active view in view.
+  requestAnimationFrame(() => {
+    const active = viewToggle.querySelector("button.active");
+    if (active && viewToggle.scrollWidth > viewToggle.clientWidth) {
+      viewToggle.scrollLeft = active.offsetLeft - (viewToggle.clientWidth - active.offsetWidth) / 2;
+    }
   });
 
   renderPresetsList();
