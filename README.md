@@ -169,7 +169,8 @@ plain in-memory `state` object and calls `saveState()`.
   breakdowns for whatever the current filters show.
 - **Command palette:** press **⌘K / Ctrl-K** (or `k`) to jump to any project or
   run a command — switch views, add a project, export, toggle dark mode or
-  archived, open Team, sign out. Arrow keys to move, Enter to run, Esc to close.
+  archived, **assign all shown projects to yourself**, open Team, sign out.
+  Arrow keys to move, Enter to run, Esc to close.
 - **Archive vs. delete:** a project's detail view (and each table row) has an
   **🗄 Archive** action — a shared "done / out of the way" state that hides the
   project from the views but keeps it **searchable** and reversible
