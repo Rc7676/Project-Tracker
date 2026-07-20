@@ -130,9 +130,11 @@ via `BOOTSTRAP_ADMINS` (so you can't lock yourself out); the current owner is
 
 - **Shared across everyone:** projects, their status/quests/sub-missions/notes/
   attachments, plus the General Missions and General Notes panels.
-- **Local to each person (not shared):** search text, filters, sort, saved
-  presets, light/dark mode, and the Normal/Fantasy card style. Your view is
-  yours; the data is everyone's.
+- **Per-user, follows you across devices:** your **light/dark mode** and
+  **card theme** are saved to your account profile, so signing in on another
+  browser or device restores your look automatically (with shared data on).
+- **Local to each browser (not shared, not synced):** search text, filters,
+  sort, and saved presets. Your view is yours; the data is everyone's.
 
 ### Good to know
 

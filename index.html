@@ -3440,6 +3440,48 @@ function applySkin() {
 applyTheme();
 applySkin();
 
+/* ---- Per-user display prefs (light/dark + card theme) follow the signed-in
+   user across devices by living in their Supabase auth profile
+   (user_metadata.ui_prefs). localStorage stays the instant, offline default;
+   the profile just carries the choice to a new browser/device. ---- */
+function applyUserPrefs(prefs) {
+  if (!prefs || typeof prefs !== "object") return;
+  let changed = false;
+  if ((prefs.theme === "light" || prefs.theme === "dark") && state.ui.theme !== prefs.theme) {
+    state.ui.theme = prefs.theme; changed = true;
+  }
+  if (isValidSkin(prefs.skin) && state.ui.skin !== prefs.skin) {
+    state.ui.skin = prefs.skin; changed = true;
+  }
+  if (!changed) return;
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  applyTheme();
+  applySkin();
+  // Skin also drives terminology across the UI, so re-render everything.
+  if (typeof renderToolbar === "function") {
+    renderToolbar();
+    renderMissionsPanel();
+    renderNotesPanel();
+    renderAll();
+    if (openDetailId) renderDetail();
+  }
+}
+
+let prefsSaveTimer = null;
+function saveUserPrefs() {
+  if (!backendEnabled() || !supabaseClient || !backendReady) return;
+  clearTimeout(prefsSaveTimer);
+  prefsSaveTimer = setTimeout(async () => {
+    try {
+      await supabaseClient.auth.updateUser({
+        data: { ui_prefs: { theme: state.ui.theme, skin: state.ui.skin } }
+      });
+    } catch (e) {
+      console.error("Could not save display preferences to your profile:", e);
+    }
+  }, 700);
+}
+
 function saveState() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -3862,9 +3904,9 @@ async function initBackend() {
     supabaseClient = window.supabase.createClient(baseUrl, SUPABASE_ANON_KEY);
 
     // React to sign-in / sign-out (also fires once on load with the current session).
-    supabaseClient.auth.onAuthStateChange((_event, session) => handleSession(session));
+    supabaseClient.auth.onAuthStateChange((event, session) => handleSession(session, event));
     const { data: { session } } = await supabaseClient.auth.getSession();
-    handleSession(session);
+    handleSession(session, "INITIAL_SESSION");
   } catch (e) {
     console.error("Backend init failed:", e);
     backendReady = false;
@@ -3872,11 +3914,18 @@ async function initBackend() {
   }
 }
 
-function handleSession(session) {
+function handleSession(session, event) {
   const signedIn = !!(session && session.user);
   updateAuthUI(signedIn, session);
   if (signedIn) {
     hideAuthOverlay();
+    // Pull this user's saved light/dark + card theme from their profile so it
+    // follows them across devices. Only on the initial/sign-in events, not on
+    // routine token refreshes.
+    if (event === undefined || event === "INITIAL_SESSION" || event === "SIGNED_IN") {
+      const meta = session.user.user_metadata || {};
+      if (meta.ui_prefs) applyUserPrefs(meta.ui_prefs);
+    }
     if (!backendReady) startSync();
   } else {
     backendReady = false;
@@ -4157,6 +4206,7 @@ function renderToolbar() {
     state.ui.theme = state.ui.theme === "dark" ? "light" : "dark";
     saveState();
     applyTheme();
+    saveUserPrefs(); // carry the choice to this user's other devices
   };
 
   const skinSelect = document.getElementById("skinSelect");
@@ -4172,6 +4222,7 @@ function renderToolbar() {
     renderNotesPanel();
     renderAll();
     if (openDetailId) renderDetail();
+    saveUserPrefs(); // carry the choice to this user's other devices
   };
 
   renderMultiChipGroup({
