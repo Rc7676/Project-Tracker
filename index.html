@@ -2771,9 +2771,9 @@
   .timeline-row { display: flex; align-items: stretch; border-bottom: 1px solid var(--border); cursor: pointer; min-height: 38px; }
   .timeline-row:hover { background: var(--row-hover); }
   .timeline-label {
-    position: sticky; left: 0; z-index: 2;
+    position: sticky; left: 0; z-index: 4; /* above bars and the today line */
     flex: 0 0 auto;
-    background: inherit;
+    background: var(--card-bg); /* solid, so bars don't show through when scrolled */
     border-right: 1px solid var(--border);
     display: flex; align-items: center; padding: 0 12px;
     font-size: 13px; font-weight: 600; color: var(--text);
@@ -7611,7 +7611,9 @@ paletteInput.addEventListener("keydown", e => {
   if (e.key === "ArrowDown") { e.preventDefault(); if (paletteEntries.length) { paletteIndex = (paletteIndex + 1) % paletteEntries.length; updatePaletteActive(); } }
   else if (e.key === "ArrowUp") { e.preventDefault(); if (paletteEntries.length) { paletteIndex = (paletteIndex - 1 + paletteEntries.length) % paletteEntries.length; updatePaletteActive(); } }
   else if (e.key === "Enter") { e.preventDefault(); runPaletteEntry(paletteIndex); }
-  else if (e.key === "Escape") { e.preventDefault(); closePalette(); }
+  // stopPropagation so Esc doesn't also reach the document-level handler
+  // that closes the project detail behind the palette.
+  else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closePalette(); }
 });
 paletteOverlay.addEventListener("click", e => { if (e.target === paletteOverlay) closePalette(); });
 
