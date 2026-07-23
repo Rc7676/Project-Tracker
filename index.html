@@ -1430,6 +1430,42 @@
     opacity: 0.55;
     letter-spacing: 0;
   }
+  /* Tags */
+  .tags-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .tag-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 9px;
+    font-size: 11.5px; font-weight: 700;
+    color: #fff;
+    background: var(--tag-color, var(--accent));
+    border-radius: 999px;
+    line-height: 1.5;
+    vertical-align: middle;
+  }
+  .tag-chip-x {
+    background: none; border: none; color: #fff; opacity: 0.75;
+    font-size: 10px; cursor: pointer; padding: 0 0 0 2px; line-height: 1;
+  }
+  .tag-chip-x:hover { opacity: 1; }
+  .tag-input {
+    width: 90px;
+    padding: 4px 10px;
+    font-size: 12px;
+    border: 1px dashed var(--border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text);
+  }
+  .tag-input:focus { border-style: solid; }
+  .card-tags {
+    display: flex; flex-wrap: wrap; gap: 4px; justify-content: center;
+    margin-bottom: 7px;
+    position: relative; z-index: 3;
+  }
+  .card-tags .tag-chip { font-size: 10px; padding: 1px 7px; }
+  .card-tags-more { font-size: 10px; color: var(--muted); font-weight: 700; align-self: center; }
+  .table-name .tag-chip { font-size: 10px; padding: 1px 7px; margin-left: 6px; }
+
   /* Attachments */
   .attach-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
   .attach-item {
@@ -2746,6 +2782,30 @@
   .team-you { font-size: 11px; color: var(--accent); font-weight: 700; }
 
   /* ---- Kanban board view ---- */
+  /* ---------- My Work view ---------- */
+  .mywork-group { margin-bottom: 22px; }
+  .mywork-group-title {
+    font-size: 14px; font-weight: 800; color: var(--text);
+    margin: 0 0 8px; padding-left: 10px;
+    border-left: 3px solid var(--group-color, var(--accent));
+    display: flex; align-items: center; gap: 8px;
+  }
+  .mywork-group-count {
+    font-size: 11.5px; font-weight: 700; color: var(--muted);
+    background: var(--row-hover); border-radius: 999px; padding: 1px 8px;
+  }
+  .mywork-row {
+    display: flex; align-items: center; gap: 11px;
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 9px; padding: 9px 12px; margin-bottom: 6px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .mywork-row:hover { border-color: var(--accent); background: var(--row-hover); }
+  .mywork-main { flex: 1; min-width: 0; }
+  .mywork-text { font-size: 13.5px; font-weight: 600; color: var(--text); }
+  .mywork-proj { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+
   /* ---------- Timeline / Gantt view ---------- */
   .timeline-scroller { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--card-bg); }
   .timeline-inner { position: relative; }
@@ -2790,6 +2850,24 @@
   }
   .timeline-bar.overdue { outline: 2px solid var(--danger); outline-offset: -2px; }
   .timeline-bar-label { color: #fff; font-size: 11px; font-weight: 700; padding: 0 7px; white-space: nowrap; text-shadow: 0 1px 1px rgba(0,0,0,0.3); }
+  .timeline-chevron { flex: 0 0 auto; margin-right: 6px; color: var(--muted); font-size: 11px; }
+  .timeline-label-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .timeline-subrow { display: flex; align-items: stretch; border-bottom: 1px solid var(--border); min-height: 28px; background: color-mix(in srgb, var(--row-hover) 55%, transparent); }
+  .timeline-sublabel {
+    font-size: 11.5px !important; font-weight: 500 !important; color: var(--muted) !important;
+    padding-left: 30px !important; cursor: pointer;
+  }
+  .timeline-sublabel:hover { color: var(--text) !important; }
+  .timeline-subrow .timeline-track { position: relative; }
+  .timeline-marker {
+    position: absolute; top: 50%; margin-top: -5px;
+    width: 10px; height: 10px;
+    background: var(--accent);
+    transform: rotate(45deg);
+    border-radius: 2px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .timeline-marker.overdue { background: var(--danger); }
   .timeline-unscheduled { margin-top: 16px; }
   .timeline-unsched-head { font-size: 12.5px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
   .timeline-unsched-list { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -2913,7 +2991,68 @@
     background: var(--card-bg);
     color: var(--text);
   }
+  .quest-meta select.quest-repeat {
+    padding: 3px 6px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    background: var(--card-bg);
+    color: var(--text);
+  }
+  .quest-repeat-badge { font-size: 12px; flex: 0 0 auto; cursor: default; }
   .quest-head-badges { display: inline-flex; gap: 5px; align-items: center; flex: 0 0 auto; }
+
+  /* ---- Mentions + notification bell ---- */
+  .comment-body .mention {
+    color: var(--accent);
+    font-weight: 700;
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    border-radius: 4px;
+    padding: 0 3px;
+  }
+  .bell-btn { position: relative; }
+  .bell-badge {
+    position: absolute; top: -6px; right: -6px;
+    min-width: 17px; height: 17px;
+    background: var(--danger); color: #fff;
+    font-size: 10.5px; font-weight: 800;
+    border-radius: 999px;
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 0 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  .bell-btn.has-unread { border-color: var(--danger); }
+  .bell-panel {
+    position: absolute;
+    right: 0; top: calc(100% + 6px);
+    width: min(340px, calc(100vw - 32px));
+    max-height: 380px; overflow-y: auto;
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 10px; box-shadow: 0 14px 40px rgba(0,0,0,0.3);
+    z-index: 90; padding: 6px;
+  }
+  .view-controls-row { position: relative; }
+  .bell-panel-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 10px; font-size: 13px; font-weight: 700; color: var(--text);
+    border-bottom: 1px solid var(--border); margin-bottom: 4px;
+  }
+  .bell-mark-read {
+    background: none; border: none; color: var(--accent);
+    font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .bell-empty { padding: 14px 12px; font-size: 12.5px; color: var(--muted); }
+  .bell-item {
+    display: block; width: 100%; text-align: left;
+    background: none; border: none; cursor: pointer;
+    padding: 8px 10px; border-radius: 8px;
+  }
+  .bell-item:hover { background: var(--row-hover); }
+  .bell-item.unread { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+  .bell-item.unread:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  .bell-item-top { font-size: 12.5px; font-weight: 700; color: var(--text); }
+  .bell-item-snippet { font-size: 12px; color: var(--muted); margin-top: 2px; white-space: pre-wrap; word-break: break-word; }
+  .bell-item-when { font-size: 11px; color: var(--muted); margin-top: 3px; }
 
   /* ---- Comments ---- */
   .comment-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
@@ -3155,9 +3294,12 @@
           <button data-view="kanban">🗂 Kanban</button>
           <button data-view="timeline">📆 Timeline</button>
           <button data-view="dashboard">📊 Dashboard</button>
+          <button data-view="mywork">🙋 My Work</button>
         </div>
         <button class="btn secondary" id="selectModeBtn" title="Select multiple projects">☑️ Select</button>
+        <button class="btn secondary bell-btn" id="mentionBell" title="Mentions of you in comments" style="display:none">🔔<span class="bell-badge" id="bellBadge" style="display:none">0</span></button>
       </div>
+      <div class="bell-panel" id="bellPanel" style="display:none"></div>
 
       <div id="content"></div>
 
@@ -3489,10 +3631,13 @@ function migrateState(parsed) {
       p.notes = [];
     }
 
-    // Assignee (project-level). Project due date was removed in favour of
-    // per-to-do due dates, but keep the field around for old backups.
+    // Assignee (project-level). The legacy project-level due date was
+    // replaced by per-to-do due dates — drop it from old data.
     if (typeof p.assignee !== "string") p.assignee = "";
-    if (typeof p.dueDate !== "string") p.dueDate = "";
+    delete p.dueDate;
+
+    // Free-form colored tags.
+    if (!Array.isArray(p.tags)) p.tags = [];
 
     // Per-project comment thread.
     if (!Array.isArray(p.comments)) p.comments = [];
@@ -3515,6 +3660,8 @@ function migrateState(parsed) {
       if (!Array.isArray(t.subs)) t.subs = [];
       if (typeof t.assignee !== "string") t.assignee = "";
       if (typeof t.dueDate !== "string") t.dueDate = "";
+      if (typeof t.repeat !== "string") t.repeat = "";   // "" | daily | weekly | monthly
+      // t.doneTs (ms timestamp of completion) is optional — used for trends.
     });
 
     // Perils removed: fold any existing perils into notes, then drop the field.
@@ -3566,7 +3713,8 @@ function migrateState(parsed) {
   if (typeof parsed.ui.assigneeFilter !== "string") parsed.ui.assigneeFilter = "all";
   if (typeof parsed.ui.dueFilter !== "string") parsed.ui.dueFilter = "all";
   if (typeof parsed.ui.showArchived !== "boolean") parsed.ui.showArchived = false;
-  if (!["cards", "table", "kanban", "timeline", "dashboard"].includes(parsed.ui.view)) parsed.ui.view = "cards";
+  if (typeof parsed.ui.mentionsSeenTs !== "number") parsed.ui.mentionsSeenTs = 0;
+  if (!["cards", "table", "kanban", "timeline", "dashboard", "mywork"].includes(parsed.ui.view)) parsed.ui.view = "cards";
   if (!Array.isArray(parsed.activity)) parsed.activity = [];
   if (!parsed.roles || typeof parsed.roles !== "object" || Array.isArray(parsed.roles)) parsed.roles = {};
   if (!parsed.displayNames || typeof parsed.displayNames !== "object" || Array.isArray(parsed.displayNames)) parsed.displayNames = {};
@@ -4073,11 +4221,116 @@ function knownAssignees() {
   });
   return [...set].sort((a, b) => a.localeCompare(b));
 }
+/* ---- @mentions in comments ---- */
+// Candidate labels someone can be mentioned by: display names, assignees,
+// comment authors, and email prefixes of everyone with a role.
+function knownMentionLabels() {
+  const set = new Set(knownAssignees());
+  Object.values(state.displayNames || {}).forEach(n => { if (n && n.trim()) set.add(n.trim()); });
+  Object.keys(state.roles || {}).forEach(e => set.add(e.split("@")[0]));
+  BOOTSTRAP_ADMINS.forEach(e => set.add(e.split("@")[0]));
+  state.projects.forEach(p => (p.comments || []).forEach(c => { if (c.user) set.add(c.user); }));
+  // Longest first so "@Dana Cohen" wins over "@Dana".
+  return [...set].filter(Boolean).sort((a, b) => b.length - a.length);
+}
+// All (start, length, label) occurrences of @Label in a text, non-overlapping.
+function findMentionSpans(text) {
+  const spans = [];
+  const lower = text.toLowerCase();
+  knownMentionLabels().forEach(label => {
+    const needle = "@" + label.toLowerCase();
+    let i = 0;
+    while ((i = lower.indexOf(needle, i)) !== -1) {
+      const end = i + needle.length;
+      if (!spans.some(s => i < s.start + s.len && s.start < end)) {
+        spans.push({ start: i, len: needle.length, label });
+      }
+      i = end;
+    }
+  });
+  return spans.sort((a, b) => a.start - b.start);
+}
+function commentMentions(text) {
+  return findMentionSpans(text).map(s => s.label.toLowerCase());
+}
+// Comment body with @mentions highlighted (safe DOM building, no innerHTML).
+function commentBodyEl(text) {
+  const body = document.createElement("div");
+  body.className = "comment-body";
+  const spans = findMentionSpans(text);
+  let pos = 0;
+  spans.forEach(s => {
+    if (s.start > pos) body.appendChild(document.createTextNode(text.slice(pos, s.start)));
+    const m = document.createElement("span");
+    m.className = "mention";
+    m.textContent = text.slice(s.start, s.start + s.len);
+    body.appendChild(m);
+    pos = s.start + s.len;
+  });
+  if (pos < text.length) body.appendChild(document.createTextNode(text.slice(pos)));
+  applyBidi(body, text);
+  return body;
+}
+// Everything that mentions ME (skipping my own comments), newest first.
+function myMentions() {
+  const me = (currentUserLabel || "").toLowerCase();
+  if (!me || me === "you") return [];
+  const hits = [];
+  state.projects.filter(roleCanSee).forEach(p => {
+    (p.comments || []).forEach(c => {
+      if ((c.user || "").toLowerCase() === me) return;
+      if (commentMentions(c.text || "").includes(me)) {
+        hits.push({ projectId: p.id, projectName: p.name, user: c.user, text: c.text, ts: c.ts });
+      }
+    });
+  });
+  return hits.sort((a, b) => b.ts - a.ts);
+}
+function unreadMentionCount() {
+  const seen = state.ui.mentionsSeenTs || 0;
+  return myMentions().filter(m => m.ts > seen).length;
+}
+
 // A project's effective due date = the soonest due date among its OPEN to-dos.
 function projectDueDate(proj) {
   const dues = (proj.todos || []).filter(t => !t.done && t.dueDate).map(t => t.dueDate);
   if (dues.length === 0) return "";
   return dues.sort()[0];
+}
+
+/* ---- Recurring to-dos ---- */
+const REPEAT_LABELS = { daily: "day", weekly: "week", monthly: "month" };
+// Next occurrence after `dateStr`; keeps advancing until it's in the future,
+// so a long-neglected recurring item doesn't come back already overdue.
+function advanceDueDate(dateStr, repeat) {
+  const d = new Date(dateStr + "T00:00:00");
+  const today = new Date(todayStr() + "T00:00:00");
+  do {
+    if (repeat === "daily") d.setDate(d.getDate() + 1);
+    else if (repeat === "weekly") d.setDate(d.getDate() + 7);
+    else if (repeat === "monthly") d.setMonth(d.getMonth() + 1);
+    else break;
+  } while (d <= today);
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+// Completing a repeating, dated to-do reschedules it to its next occurrence
+// (it stays open); everything else toggles done/undone normally.
+function toggleQuestDone(proj, quest) {
+  const word = isFantasy() ? "quest" : "to-do";
+  if (!quest.done && quest.repeat && quest.dueDate) {
+    const next = advanceDueDate(quest.dueDate, quest.repeat);
+    quest.dueDate = next;
+    quest.doneTs = Date.now();               // counts as a completion for trends
+    (quest.subs || []).forEach(s => { s.done = false; });
+    logActivity('completed recurring ' + word + ' "' + quest.text + '" on "' + proj.name + '" — next due ' + next, proj.id);
+    showInfoToast("🔁 Done! Rescheduled to " + new Date(next + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" }) + ".");
+  } else {
+    quest.done = !quest.done;
+    if (quest.done) quest.doneTs = Date.now();
+    else delete quest.doneTs;
+    logActivity((quest.done ? "completed " : "reopened ") + word + ' "' + quest.text + '" on "' + proj.name + '"', proj.id);
+  }
+  persistAndRefresh();
 }
 function assigneeInitials(name) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -4090,6 +4343,36 @@ function assigneeColor(name) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
   return "hsl(" + h + ", 55%, 45%)";
+}
+// Same idea for tags (slightly softer so they read as labels, not people).
+function tagColor(tag) {
+  let h = 0;
+  for (let i = 0; i < tag.length; i++) h = (h * 37 + tag.charCodeAt(i)) % 360;
+  return "hsl(" + h + ", 60%, 42%)";
+}
+function allTags() {
+  const set = new Set();
+  state.projects.forEach(p => (p.tags || []).forEach(t => set.add(t)));
+  return [...set].sort();
+}
+function tagChipEl(tag, onRemove) {
+  const chip = document.createElement("span");
+  chip.className = "tag-chip";
+  chip.style.setProperty("--tag-color", tagColor(tag));
+  const label = document.createElement("span");
+  label.textContent = tag;
+  applyBidi(label, tag);
+  chip.appendChild(label);
+  if (onRemove) {
+    const x = document.createElement("button");
+    x.className = "tag-chip-x";
+    x.textContent = "✕";
+    x.title = "Remove tag";
+    x.setAttribute("aria-label", "Remove tag " + tag);
+    x.addEventListener("click", e => { e.stopPropagation(); onRemove(); });
+    chip.appendChild(x);
+  }
+  return chip;
 }
 function todayStr() {
   const d = new Date();
@@ -4338,9 +4621,9 @@ function newProject(name, category) {
     comments: [],
     attachments: [],
     archived: false,
+    tags: [],
     piles: {},
-    assignee: "",
-    dueDate: ""
+    assignee: ""
   };
 }
 
@@ -4380,12 +4663,13 @@ function getFilteredProjects() {
     if (query) {
       const inName = p.name.toLowerCase().includes(query);
       const inNotes = p.notes.some(n => n.text.toLowerCase().includes(query));
+      const inTags = (p.tags || []).some(t => t.toLowerCase().includes(query));
       const inQuests = p.todos.some(t =>
         t.text.toLowerCase().includes(query) ||
         (t.description || "").toLowerCase().includes(query) ||
         (t.subs || []).some(s => s.text.toLowerCase().includes(query))
       );
-      if (!inName && !inNotes && !inQuests) return false;
+      if (!inName && !inNotes && !inTags && !inQuests) return false;
     }
     return true;
   });
@@ -4604,6 +4888,7 @@ function renderToolbar() {
 
   renderPresetsList();
   applyRoleUI();
+  if (typeof renderMentionBell === "function") renderMentionBell();
 }
 
 /* ---------- Add bar ---------- */
@@ -4941,6 +5226,12 @@ function renderContent() {
     return;
   }
 
+  // My Work is a personal agenda — it ignores the filter bar entirely.
+  if (state.ui.view === "mywork") {
+    content.appendChild(renderMyWorkView());
+    return;
+  }
+
   const projects = getFilteredProjects();
 
   content.appendChild(renderFilterBar(projects.length));
@@ -5230,6 +5521,21 @@ function renderCardsView(projects) {
     typeline.appendChild(statusPillEl(proj.statusIndex));
     card.appendChild(typeline);
 
+    // Tags (small colored chips, only when present).
+    if (proj.tags && proj.tags.length) {
+      const tagRow = document.createElement("div");
+      tagRow.className = "card-tags";
+      proj.tags.slice(0, 3).forEach(t => tagRow.appendChild(tagChipEl(t)));
+      if (proj.tags.length > 3) {
+        const more = document.createElement("span");
+        more.className = "card-tags-more";
+        more.textContent = "+" + (proj.tags.length - 3);
+        more.title = proj.tags.slice(3).join(", ");
+        tagRow.appendChild(more);
+      }
+      card.appendChild(tagRow);
+    }
+
     // Notes, then To Do's.
     const doneCount = proj.todos.filter(t => t.done).length;
     const rules = document.createElement("div");
@@ -5365,6 +5671,7 @@ function renderTableView(projects) {
       ab.textContent = "Archived";
       tdName.appendChild(ab);
     }
+    (proj.tags || []).slice(0, 2).forEach(t => tdName.appendChild(tagChipEl(t)));
     applyBidi(tdName, proj.name);
     tr.appendChild(tdName);
 
@@ -5427,9 +5734,129 @@ function renderTableView(projects) {
   return wrap;
 }
 
+/* ---------- My Work view (personal agenda) ---------- */
+function renderMyWorkView() {
+  const wrap = document.createElement("div");
+  wrap.className = "mywork";
+  const meLabels = new Set();
+  if (currentUserLabel && currentUserLabel !== "You") meLabels.add(currentUserLabel.toLowerCase());
+  if (currentUserEmail) meLabels.add(currentUserEmail.split("@")[0].toLowerCase());
+
+  if (meLabels.size === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.innerHTML = `<div class="empty-icon">🙋</div><h3>Sign in to see your work</h3>
+      <p>This view collects every open to-do assigned to you, across all projects.</p>`;
+    wrap.appendChild(empty);
+    return wrap;
+  }
+
+  // Open to-dos that are mine: assigned to me directly, or unassigned on a
+  // project that is assigned to me.
+  const mine = [];
+  visibleActiveProjects().forEach(p => {
+    const projMine = meLabels.has((p.assignee || "").toLowerCase());
+    (p.todos || []).forEach(t => {
+      if (t.done) return;
+      const tMine = t.assignee ? meLabels.has(t.assignee.toLowerCase()) : projMine;
+      if (tMine) mine.push({ p, t });
+    });
+  });
+
+  if (mine.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.innerHTML = `<div class="empty-icon">🎉</div><h3>Nothing on your plate</h3>
+      <p>No open to-dos are assigned to you right now.</p>`;
+    wrap.appendChild(empty);
+    return wrap;
+  }
+
+  const today = dayNum(todayStr());
+  const groups = { overdue: [], today: [], week: [], later: [], nodate: [] };
+  mine.forEach(item => {
+    if (!item.t.dueDate) { groups.nodate.push(item); return; }
+    const diff = dayNum(item.t.dueDate) - today;
+    if (diff < 0) groups.overdue.push(item);
+    else if (diff === 0) groups.today.push(item);
+    else if (diff <= 7) groups.week.push(item);
+    else groups.later.push(item);
+  });
+  const byDue = (a, b) => (a.t.dueDate || "9999").localeCompare(b.t.dueDate || "9999");
+  Object.values(groups).forEach(g => g.sort(byDue));
+
+  const GROUP_META = [
+    ["overdue", "🔥 Overdue", "var(--danger)"],
+    ["today", "📅 Today", "#e8a13a"],
+    ["week", "🗓️ This week", "var(--accent)"],
+    ["later", "⏳ Later", "var(--muted)"],
+    ["nodate", "📌 No date", "var(--muted)"]
+  ];
+  const count = document.createElement("div");
+  count.className = "filter-bar";
+  count.innerHTML = `<span><span class="filter-count">${mine.length}</span> open to-do${mine.length === 1 ? "" : "s"} assigned to you</span>`;
+  wrap.appendChild(count);
+
+  GROUP_META.forEach(([key, label, color]) => {
+    const items = groups[key];
+    if (!items.length) return;
+    const section = document.createElement("div");
+    section.className = "mywork-group";
+    const h = document.createElement("h3");
+    h.className = "mywork-group-title";
+    h.style.setProperty("--group-color", color);
+    h.innerHTML = `${label} <span class="mywork-group-count">${items.length}</span>`;
+    section.appendChild(h);
+
+    items.forEach(({ p, t }) => {
+      const row = document.createElement("div");
+      row.className = "mywork-row";
+      const editable = canEditTodos(p);
+
+      const toggle = document.createElement("button");
+      toggle.className = "entry-toggle";
+      toggle.setAttribute("aria-label", "Mark complete");
+      if (editable) {
+        toggle.addEventListener("click", e => {
+          e.stopPropagation();
+          toggleQuestDone(p, t);
+        });
+      } else {
+        toggle.disabled = true;
+        toggle.style.cursor = "default";
+      }
+      row.appendChild(toggle);
+
+      const main = document.createElement("div");
+      main.className = "mywork-main";
+      const text = document.createElement("div");
+      text.className = "mywork-text";
+      text.textContent = t.text + (t.repeat ? " 🔁" : "");
+      applyBidi(text, t.text);
+      main.appendChild(text);
+      const projLine = document.createElement("div");
+      projLine.className = "mywork-proj";
+      projLine.textContent = p.name;
+      applyBidi(projLine, p.name);
+      main.appendChild(projLine);
+      row.appendChild(main);
+
+      const due = dueBadgeEl(t.dueDate);
+      if (due) row.appendChild(due);
+
+      row.addEventListener("click", () => openDetail(p.id));
+      section.appendChild(row);
+    });
+    wrap.appendChild(section);
+  });
+  return wrap;
+}
+
 /* ---------- Timeline / Gantt view ---------- */
 function dayNum(dateStr) { return Math.floor(new Date(dateStr + "T00:00:00").getTime() / 86400000); }
 function dayToDate(n) { return new Date(n * 86400000); }
+// Projects whose timeline row is expanded into per-to-do lanes.
+const timelineExpanded = new Set();
 
 function renderTimelineView(projects) {
   const wrap = document.createElement("div");
@@ -5507,16 +5934,25 @@ function renderTimelineView(projects) {
     inner.appendChild(todayLine);
 
     scheduled.forEach(({ p, start, end }) => {
+      const expanded = timelineExpanded.has(p.id);
       const row = document.createElement("div");
       row.className = "timeline-row" + (p.archived ? " archived-row" : "");
-      row.addEventListener("click", () => openDetail(p.id));
 
       const label = document.createElement("div");
       label.className = "timeline-label";
       label.style.width = LABEL_W + "px";
-      label.textContent = p.name;
-      label.title = p.name;
-      applyBidi(label, p.name);
+      const chev = document.createElement("span");
+      chev.className = "timeline-chevron";
+      chev.textContent = expanded ? "▾" : "▸";
+      label.appendChild(chev);
+      const nameSpan = document.createElement("span");
+      nameSpan.className = "timeline-label-name";
+      nameSpan.textContent = p.name;
+      applyBidi(nameSpan, p.name);
+      label.appendChild(nameSpan);
+      label.title = p.name + " — click to open";
+      // Label opens the project; the bar/track expands into per-to-do lanes.
+      label.addEventListener("click", e => { e.stopPropagation(); openDetail(p.id); });
       row.appendChild(label);
 
       const track = document.createElement("div");
@@ -5536,14 +5972,47 @@ function renderTimelineView(projects) {
       bar.style.width = Math.max(DAY_W, (end - start + 1) * DAY_W) + "px";
       bar.style.background = STAGES[p.statusIndex].color;
       const openN = p.todos.filter(t => !t.done).length;
-      bar.title = p.name + " · " + STAGES[p.statusIndex].name + " · " + openN + " open to-do" + (openN === 1 ? "" : "s");
+      bar.title = p.name + " · " + STAGES[p.statusIndex].name + " · click to " + (expanded ? "collapse" : "see the to-dos behind this bar");
       const barLabel = document.createElement("span");
       barLabel.className = "timeline-bar-label";
-      barLabel.textContent = STAGES[p.statusIndex].name;
+      barLabel.textContent = STAGES[p.statusIndex].name + " · " + openN + " open";
       bar.appendChild(barLabel);
       track.appendChild(bar);
+      // Clicking the row/bar toggles the per-to-do breakdown.
+      row.addEventListener("click", () => {
+        if (timelineExpanded.has(p.id)) timelineExpanded.delete(p.id);
+        else timelineExpanded.add(p.id);
+        renderContent();
+      });
       row.appendChild(track);
       inner.appendChild(row);
+
+      if (expanded) {
+        p.todos.filter(t => !t.done && t.dueDate).sort((a, b) => a.dueDate.localeCompare(b.dueDate)).forEach(t => {
+          const sub = document.createElement("div");
+          sub.className = "timeline-subrow";
+          const subLabel = document.createElement("div");
+          subLabel.className = "timeline-label timeline-sublabel";
+          subLabel.style.width = LABEL_W + "px";
+          subLabel.textContent = t.text + (t.repeat ? " 🔁" : "");
+          subLabel.title = t.text;
+          applyBidi(subLabel, t.text);
+          subLabel.addEventListener("click", e => { e.stopPropagation(); openDetail(p.id); });
+          sub.appendChild(subLabel);
+
+          const subTrack = document.createElement("div");
+          subTrack.className = "timeline-track";
+          subTrack.style.width = chartW + "px";
+          const d = dayNum(t.dueDate);
+          const marker = document.createElement("div");
+          marker.className = "timeline-marker" + (d < today ? " overdue" : "");
+          marker.style.left = ((d - minD) * DAY_W + DAY_W / 2 - 5) + "px";
+          marker.title = t.text + " · due " + t.dueDate + (t.assignee ? " · " + t.assignee : "");
+          subTrack.appendChild(marker);
+          sub.appendChild(subTrack);
+          inner.appendChild(sub);
+        });
+      }
     });
 
     scroller.appendChild(inner);
@@ -5683,6 +6152,21 @@ function renderDashboardView(projects) {
     .sort((a, b) => b.count - a.count)
     .slice(0, 8);
   grid.appendChild(chartBlock("Open to-dos by assignee", assigneeRows.length ? assigneeRows : [{ label: "—", count: 0 }]));
+
+  // Completed per week (last 8 weeks), from the shared activity log — every
+  // "completed …" entry is one finished to-do (recurring completions count too).
+  const weekMs = 7 * 86400000;
+  const now = Date.now();
+  const weekRows = [];
+  for (let w = 7; w >= 0; w--) {
+    const from = now - (w + 1) * weekMs, to = now - w * weekMs;
+    const n = (state.activity || []).filter(a => /^completed /.test(a.text || "") && a.ts > from && a.ts <= to).length;
+    const startLabel = new Date(from).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    weekRows.push({ label: w === 0 ? "This week" : startLabel, count: n, color: w === 0 ? "var(--accent)" : "color-mix(in srgb, var(--accent) 55%, transparent)" });
+  }
+  if (weekRows.some(r => r.count > 0)) {
+    grid.appendChild(chartBlock("Completed per week", weekRows));
+  }
   wrap.appendChild(grid);
   return wrap;
 }
@@ -6034,6 +6518,7 @@ function renderDetail() {
 
   const stack = document.createElement("div");
   stack.className = "detail-stack";
+  stack.appendChild(renderTagsBox(proj));
   if (can("editProject", proj)) stack.appendChild(renderAssignmentBox(proj));
   stack.appendChild(renderQuestLog(proj));
   stack.appendChild(renderProjectNotesBox(proj));
@@ -6041,6 +6526,64 @@ function renderDetail() {
   stack.appendChild(renderCommentsBox(proj));
   stack.appendChild(renderProjectHistoryBox(proj));
   detailBody.appendChild(stack);
+}
+
+function renderTagsBox(proj) {
+  const box = document.createElement("div");
+  box.className = "section-box tags-box";
+  const editable = can("editProject", proj);
+  if (!Array.isArray(proj.tags)) proj.tags = [];
+  const h4 = document.createElement("h4");
+  h4.textContent = "🏷️ Tags";
+  box.appendChild(h4);
+
+  const row = document.createElement("div");
+  row.className = "tags-row";
+  if (proj.tags.length === 0 && !editable) {
+    const empty = document.createElement("span");
+    empty.className = "attach-hint";
+    empty.textContent = "No tags.";
+    row.appendChild(empty);
+  }
+  proj.tags.forEach(tag => {
+    row.appendChild(tagChipEl(tag, editable ? () => {
+      runUndoable('Tag "' + tag + '" removed.', () => {
+        proj.tags = proj.tags.filter(t => t !== tag);
+      });
+    } : null));
+  });
+
+  if (editable) {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "tag-input";
+    input.placeholder = "+ tag";
+    input.dir = "auto";
+    input.setAttribute("list", "tagOptions");
+    const dl = document.createElement("datalist");
+    dl.id = "tagOptions";
+    allTags().forEach(t => {
+      if (!proj.tags.includes(t)) {
+        const o = document.createElement("option");
+        o.value = t;
+        dl.appendChild(o);
+      }
+    });
+    function addTag() {
+      const v = input.value.trim();
+      if (!v || proj.tags.includes(v)) { input.value = ""; return; }
+      proj.tags.push(v);
+      input.value = "";
+      logActivity('tagged "' + proj.name + '" with "' + v + '"', proj.id);
+      persistAndRefresh();
+    }
+    input.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addTag(); } });
+    input.addEventListener("change", addTag);
+    row.appendChild(input);
+    row.appendChild(dl);
+  }
+  box.appendChild(row);
+  return box;
 }
 
 function renderCommentsBox(proj) {
@@ -6081,11 +6624,7 @@ function renderCommentsBox(proj) {
         head.appendChild(del);
       }
       el.appendChild(head);
-      const body = document.createElement("div");
-      body.className = "comment-body";
-      body.textContent = c.text;
-      applyBidi(body, c.text);
-      el.appendChild(body);
+      el.appendChild(commentBodyEl(c.text));
       list.appendChild(el);
     });
     box.appendChild(list);
@@ -6097,7 +6636,7 @@ function renderCommentsBox(proj) {
     const ta = document.createElement("textarea");
     ta.className = "note-input";
     ta.rows = 2;
-    ta.placeholder = "Write a comment...";
+    ta.placeholder = "Write a comment... (@name to mention)";
     ta.dir = "auto";
     const addBtn = document.createElement("button");
     addBtn.className = "btn small-btn";
@@ -6565,7 +7104,7 @@ function renderQuestLog(proj) {
       if (!canEditTodos(proj)) return permissionDenied();
       const val = input.value.trim();
       if (!val) return;
-      proj.todos.push({ text: val, description: "", subs: [], done: false, assignee: "", dueDate: "" });
+      proj.todos.push({ text: val, description: "", subs: [], done: false, assignee: "", dueDate: "", repeat: "" });
       logActivity('added ' + (isFantasy() ? "quest" : "to-do") + ' "' + val + '" to "' + proj.name + '"', proj.id);
       input.value = "";
       persistAndRefresh();
@@ -6639,11 +7178,7 @@ function renderQuestCard(proj, quest, idx) {
   toggle.setAttribute("aria-label", quest.done ? "Mark incomplete" : "Mark complete");
   toggle.textContent = quest.done ? "✓" : "";
   if (editable) {
-    toggle.addEventListener("click", () => {
-      quest.done = !quest.done;
-      logActivity((quest.done ? "completed " : "reopened ") + (isFantasy() ? "quest" : "to-do") + ' "' + quest.text + '" on "' + proj.name + '"', proj.id);
-      persistAndRefresh();
-    });
+    toggle.addEventListener("click", () => toggleQuestDone(proj, quest));
   } else {
     toggle.disabled = true;
     toggle.style.cursor = "default";
@@ -6661,6 +7196,14 @@ function renderQuestCard(proj, quest, idx) {
     );
   }
   head.appendChild(name);
+
+  if (quest.repeat) {
+    const rep = document.createElement("span");
+    rep.className = "quest-repeat-badge";
+    rep.textContent = "🔁";
+    rep.title = "Repeats " + quest.repeat + (quest.dueDate ? "" : " (needs a due date)");
+    head.appendChild(rep);
+  }
 
   if (quest.subs.length) {
     const done = quest.subs.filter(s => s.done).length;
@@ -6781,6 +7324,25 @@ function renderQuestCard(proj, quest, idx) {
     persistAndRefresh();
   });
   meta.appendChild(qDue);
+
+  // Recurrence — completing a dated repeating to-do reschedules it.
+  const qRepeat = document.createElement("select");
+  qRepeat.className = "quest-repeat";
+  qRepeat.title = "Repeat (needs a due date)";
+  [["", "No repeat"], ["daily", "🔁 Daily"], ["weekly", "🔁 Weekly"], ["monthly", "🔁 Monthly"]].forEach(([v, label]) => {
+    const o = document.createElement("option");
+    o.value = v; o.textContent = label;
+    qRepeat.appendChild(o);
+  });
+  qRepeat.value = quest.repeat || "";
+  qRepeat.addEventListener("change", () => {
+    quest.repeat = qRepeat.value;
+    if (quest.repeat && !quest.dueDate) showInfoToast("Set a due date so the repeat has an anchor.");
+    logActivity((quest.repeat ? ('made ' + (isFantasy() ? "quest" : "to-do") + ' "' + quest.text + '" repeat ' + quest.repeat)
+                              : ('stopped repeat on ' + (isFantasy() ? "quest" : "to-do") + ' "' + quest.text + '"')) + ' on "' + proj.name + '"', proj.id);
+    persistAndRefresh();
+  });
+  meta.appendChild(qRepeat);
   card.appendChild(meta);
   }
 
@@ -7504,6 +8066,86 @@ document.getElementById("toolbarMobileHeader").addEventListener("click", () => {
   document.getElementById("toolbarMobileHeader").setAttribute("aria-expanded", open ? "true" : "false");
 });
 
+/* ---------- Mention notifications (🔔) ---------- */
+function renderMentionBell() {
+  const bell = document.getElementById("mentionBell");
+  const badge = document.getElementById("bellBadge");
+  if (!bell) return;
+  const me = (currentUserLabel || "").toLowerCase();
+  if (!me || me === "you") { bell.style.display = "none"; hideBellPanel(); return; }
+  bell.style.display = "";
+  const n = unreadMentionCount();
+  badge.textContent = n > 9 ? "9+" : String(n);
+  badge.style.display = n > 0 ? "" : "none";
+  bell.classList.toggle("has-unread", n > 0);
+}
+function hideBellPanel() {
+  const p = document.getElementById("bellPanel");
+  if (p) p.style.display = "none";
+}
+function toggleBellPanel() {
+  const panel = document.getElementById("bellPanel");
+  if (panel.style.display !== "none") { hideBellPanel(); return; }
+  const mentions = myMentions().slice(0, 15);
+  const seen = state.ui.mentionsSeenTs || 0;
+  panel.innerHTML = "";
+
+  const head = document.createElement("div");
+  head.className = "bell-panel-head";
+  const title = document.createElement("span");
+  title.textContent = "Mentions of you";
+  head.appendChild(title);
+  if (mentions.length) {
+    const markBtn = document.createElement("button");
+    markBtn.className = "bell-mark-read";
+    markBtn.textContent = "Mark all read";
+    markBtn.addEventListener("click", () => {
+      state.ui.mentionsSeenTs = Date.now();
+      saveState();
+      renderMentionBell();
+      hideBellPanel();
+    });
+    head.appendChild(markBtn);
+  }
+  panel.appendChild(head);
+
+  if (mentions.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "bell-empty";
+    empty.textContent = "No one has mentioned you yet. Comments with @" + currentUserLabel + " will show up here.";
+    panel.appendChild(empty);
+  }
+  mentions.forEach(m => {
+    const item = document.createElement("button");
+    item.className = "bell-item" + (m.ts > seen ? " unread" : "");
+    const top = document.createElement("div");
+    top.className = "bell-item-top";
+    top.textContent = m.user + " · " + m.projectName;
+    applyBidi(top, m.user + m.projectName);
+    item.appendChild(top);
+    const snippet = document.createElement("div");
+    snippet.className = "bell-item-snippet";
+    snippet.textContent = m.text.length > 90 ? m.text.slice(0, 90) + "…" : m.text;
+    applyBidi(snippet, m.text);
+    item.appendChild(snippet);
+    const when = document.createElement("div");
+    when.className = "bell-item-when";
+    when.textContent = timeAgo(m.ts);
+    item.appendChild(when);
+    item.addEventListener("click", () => {
+      hideBellPanel();
+      openDetail(m.projectId);
+    });
+    panel.appendChild(item);
+  });
+  panel.style.display = "";
+}
+document.getElementById("mentionBell").addEventListener("click", e => { e.stopPropagation(); toggleBellPanel(); });
+document.addEventListener("click", e => {
+  const panel = document.getElementById("bellPanel");
+  if (panel && panel.style.display !== "none" && !panel.contains(e.target)) hideBellPanel();
+});
+
 /* ---------- Command palette (Cmd/Ctrl-K) ---------- */
 const paletteOverlay = document.getElementById("paletteOverlay");
 const paletteInput = document.getElementById("paletteInput");
@@ -7528,6 +8170,7 @@ function buildPaletteCommands() {
   add("🗂", "View: Kanban", () => setView("kanban"), "View");
   add("📆", "View: Timeline", () => setView("timeline"), "View");
   add("📊", "View: Dashboard", () => setView("dashboard"), "View");
+  add("🙋", "View: My Work", () => setView("mywork"), "View");
   add("🔍", "Focus search", () => document.getElementById("searchInput").focus(), "Action");
   add("🧹", "Clear all filters", () => resetFilters(), "Action");
   if ((currentRole() === "admin" || currentRole() === "editor") && currentUserLabel && currentUserLabel !== "You") {
@@ -7550,7 +8193,8 @@ function computePaletteEntries(query) {
   const cmds = buildPaletteCommands().filter(c => !q || c.label.toLowerCase().includes(q));
   // Project matches (open detail). Include archived so they stay findable.
   let projs = state.projects.filter(roleCanSee);
-  if (q) projs = projs.filter(p => p.name.toLowerCase().includes(q));
+  if (q) projs = projs.filter(p => p.name.toLowerCase().includes(q) ||
+    (p.tags || []).some(t => t.toLowerCase().includes(q)));
   const projEntries = projs.slice(0, q ? 8 : 5).map(p => ({
     icon: "📁",
     label: p.name + (p.archived ? " (archived)" : ""),

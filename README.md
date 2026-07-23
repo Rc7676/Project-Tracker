@@ -162,11 +162,25 @@ plain in-memory `state` object and calls `saveState()`.
 
 ## Tips
 
-- **Views:** switch between **Cards**, **Table**, **Kanban**, **Timeline**, and
-  **Dashboard**. In Kanban, drag a project card between stage columns to change
-  its status. **Timeline** lays projects on a date axis by their to-do due dates
-  (with a "today" line); **Dashboard** shows KPI tiles and status/kind/assignee
-  breakdowns for whatever the current filters show.
+- **Views:** switch between **Cards**, **Table**, **Kanban**, **Timeline**,
+  **Dashboard**, and **My Work**. In Kanban, drag a project card between stage
+  columns to change its status. **Timeline** lays projects on a date axis by
+  their to-do due dates (with a "today" line) — click a bar to expand it into
+  per-to-do lanes showing exactly which to-do sits on which date; click the
+  project name to open it. **Dashboard** shows KPI tiles,
+  status/kind/assignee breakdowns, and a **completed-per-week** trend, all for
+  whatever the current filters show.
+- **My Work:** your personal agenda — every open to-do assigned to you (or on
+  a project assigned to you), grouped **Overdue / Today / This week / Later /
+  No date**. Complete items right from the list.
+- **Tags:** add free-form colored tags to a project (🏷️ box in its detail
+  view). They show on cards and in the table, and search finds them.
+- **Recurring to-dos:** give a to-do a due date and set 🔁 Daily/Weekly/Monthly.
+  Completing it doesn't close it — it reschedules to the next occurrence (and
+  still counts as a completion in the dashboard trend).
+- **@mentions:** type `@name` in a comment to mention a teammate. Their 🔔 bell
+  (next to the view switcher) shows an unread badge; clicking it lists their
+  mentions and jumps to the project. "Mark all read" clears it.
 - **Command palette:** press **⌘K / Ctrl-K** (or `k`) to jump to any project or
   run a command — switch views, add a project, export, toggle dark mode or
   archived, **assign all shown projects to yourself**, open Team, sign out.
@@ -206,3 +220,10 @@ plain in-memory `state` object and calls `saveState()`.
 ## Local development
 
 It's a static file — just open `index.html` in a browser. No install, no build.
+
+## Tests
+
+`npm install && npm test` runs the headless QA suite (`qa/run.js`) — it drives
+the real app in Chromium and checks every view across roles and screen sizes,
+plus undo, CSV, tags, recurring to-dos, mentions, and the command palette. Set
+`PW_CHROMIUM=/path/to/chrome` if Chromium isn't auto-detected.

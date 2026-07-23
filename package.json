@@ -1,0 +1,11 @@
+{
+  "name": "project-tracker",
+  "private": true,
+  "description": "Single-file project tracker. `npm test` runs the headless QA suite in qa/run.js.",
+  "scripts": {
+    "test": "node qa/run.js"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.48.0"
+  }
+}
