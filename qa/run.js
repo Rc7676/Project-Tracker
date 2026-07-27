@@ -178,6 +178,31 @@ const SEED = `(role) => {
     await page.close();
   }
 
+  console.log('\n6b. Completed to-dos sort below open ones');
+  {
+    const page = await seeded('admin', 1200);
+    const r = await page.evaluate(`(() => {
+      const p = state.projects[0]; // todos: [open, done] seeded alternating
+      p.todos = [
+        { text: 'done-A', description: '', subs: [], done: true, assignee: '', dueDate: '', repeat: '' },
+        { text: 'open-B', description: '', subs: [], done: false, assignee: '', dueDate: '', repeat: '' },
+        { text: 'done-C', description: '', subs: [], done: true, assignee: '', dueDate: '', repeat: '' },
+        { text: 'open-D', description: '', subs: [], done: false, assignee: '', dueDate: '', repeat: '' },
+      ];
+      openDetail(p.id);
+      const shown = [...document.querySelectorAll('.quest-list .quest-name')].map(e => e.textContent);
+      // delete the LAST shown (a done item) and confirm the right one is removed
+      const dels = document.querySelectorAll('.quest-list .entry-delete');
+      dels[dels.length - 1].click();
+      const afterDelete = p.todos.map(t => t.text);
+      closeDetail();
+      return { shown, afterDelete };
+    })()`);
+    check('open items listed first', JSON.stringify(r.shown) === JSON.stringify(['open-B', 'open-D', 'done-A', 'done-C']), r.shown);
+    check('delete removes the correct (sorted) item', JSON.stringify(r.afterDelete) === JSON.stringify(['done-A', 'open-B', 'open-D']), r.afterDelete);
+    await page.close();
+  }
+
   console.log('\n7. Mentions + bell');
   {
     const page = await seeded('admin', 1200);

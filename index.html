@@ -4291,6 +4291,12 @@ function unreadMentionCount() {
   return myMentions().filter(m => m.ts > seen).length;
 }
 
+// Display order for to-do lists: open items first, completed below them —
+// stable, and purely visual (the stored array is never reordered).
+function openFirst(items) {
+  return items.filter(t => !t.done).concat(items.filter(t => t.done));
+}
+
 // A project's effective due date = the soonest due date among its OPEN to-dos.
 function projectDueDate(proj) {
   const dues = (proj.todos || []).filter(t => !t.done && t.dueDate).map(t => t.dueDate);
@@ -5565,7 +5571,7 @@ function renderCardsView(projects) {
       tooltipTitle.textContent = T("tooltipTitle");
       tooltip.appendChild(tooltipTitle);
       const tooltipList = document.createElement("ul");
-      proj.todos.forEach(t => {
+      openFirst(proj.todos).forEach(t => {
         const li = document.createElement("li");
         li.className = t.done ? "done" : "";
         const mark = document.createElement("span");
@@ -7133,8 +7139,8 @@ function renderQuestLog(proj) {
 
   const list = document.createElement("div");
   list.className = "quest-list";
-  proj.todos.forEach((quest, idx) => {
-    list.appendChild(renderQuestCard(proj, quest, idx));
+  openFirst(proj.todos).forEach(quest => {
+    list.appendChild(renderQuestCard(proj, quest, proj.todos.indexOf(quest)));
   });
   box.appendChild(list);
   return box;
@@ -7249,7 +7255,8 @@ function renderQuestCard(proj, quest, idx) {
     del.addEventListener("click", () => {
       runUndoable((isFantasy() ? "Quest" : "To-do") + " deleted.", () => {
         logActivity('removed ' + (isFantasy() ? "quest" : "to-do") + ' "' + quest.text + '" from "' + proj.name + '"', proj.id);
-        proj.todos.splice(idx, 1);
+        const i = proj.todos.indexOf(quest); // live index — display order is sorted
+        if (i !== -1) proj.todos.splice(i, 1);
       });
     });
     head.appendChild(del);
@@ -7352,12 +7359,12 @@ function renderQuestCard(proj, quest, idx) {
   if (quest.subs.length) {
     const subList = document.createElement("ul");
     subList.className = "item-list quest-sub-list";
-    quest.subs.forEach((sub, sIdx) => {
+    openFirst(quest.subs).forEach(sub => {
       subList.appendChild(createEntryItem(
         sub,
         "var(--accent)",
         editable ? () => { sub.done = !sub.done; persistAndRefresh(); } : null,
-        editable ? () => { quest.subs.splice(sIdx, 1); persistAndRefresh(); } : null,
+        editable ? () => { const i = quest.subs.indexOf(sub); if (i !== -1) quest.subs.splice(i, 1); persistAndRefresh(); } : null,
         editable ? (v) => { sub.text = v; persistAndRefresh(); } : null
       ));
     });
